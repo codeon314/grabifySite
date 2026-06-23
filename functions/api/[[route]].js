@@ -59,7 +59,7 @@ function parseCookies(cookieHeader) {
 }
 
 export async function onRequestPost(context) {
-  const { request, env } = context;
+  const { request } = context;
   const url = new URL(request.url);
   const route = url.pathname.replace(/\/$/, '').split('/').pop();
   
@@ -70,28 +70,6 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
   }
 
-  // --- SECURE LOGIN HANDLER ---
-  if (route === 'login') {
-    const { password } = body;
-    const SITE_PASSWORD = env.SITE_PASSWORD || 'dev';
-    
-    if (password === SITE_PASSWORD) {
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Set-Cookie': `site_auth=${password}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
-        }
-      });
-    } else {
-      return new Response(JSON.stringify({ error: 'Invalid password' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-  }
-
-  // --- GRABIFY API HANDLERS ---
   const cookieHeader = request.headers.get('Cookie');
   const cookies = parseCookies(cookieHeader);
   let confirmation = cookies['grabify_confirmation'];

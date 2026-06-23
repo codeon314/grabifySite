@@ -1,0 +1,175 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Login | Mastercodeon">
+  <main class="login-main">
+    <div class="login-box">
+      <h1 style="color: var(--accent-color); text-align: center; margin-bottom: 1.5rem;">Access Restricted</h1>
+      <form class="login-form" id="loginForm">
+        <input type="password" id="pwdInput" placeholder="Enter Password" required autofocus />
+        <button type="submit" id="loginBtn">Login</button>
+      </form>
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script is:inline>
+    function showToast(message, isError = false) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${isError ? 'error' : ''}`;
+      toast.textContent = message;
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.add('fade-out');
+        toast.addEventListener('animationend', () => toast.remove());
+      }, 3000);
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const pwdInput = document.getElementById('pwdInput');
+      const password = pwdInput.value;
+      const btn = document.getElementById('loginBtn');
+
+      if (!password) {
+        showToast('Please enter a password', true);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+
+        if (res.ok) {
+          window.location.href = '/';
+        } else {
+          pwdInput.classList.add('input-error');
+          pwdInput.value = '';
+          pwdInput.placeholder = 'Incorrect password';
+          showToast('Invalid password', true);
+          
+          setTimeout(() => {
+            pwdInput.classList.remove('input-error');
+            pwdInput.placeholder = 'Enter Password';
+          }, 3000);
+        }
+      } catch (err) {
+        showToast('Error connecting to server', true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Login';
+      }
+    });
+  </script>
+</Layout>
+
+<style is:global>
+  .login-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+  }
+  .login-box {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 2.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 30px rgba(0, 229, 255, 0.1);
+    width: 100%;
+    max-width: 400px;
+  }
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .login-form input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: #111;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 6px;
+  }
+  .login-form input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
+  }
+  .login-form button {
+    padding: 0.8rem;
+    font-size: 1rem;
+    background-color: var(--accent-color);
+    color: #000;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+  }
+  .login-form button:hover:not(:disabled) {
+    background-color: #00cce0;
+    transform: translateY(-2px);
+  }
+  .input-error {
+    border-color: #ff4444 !important;
+    box-shadow: 0 0 0 3px rgba(255, 68, 68, 0.15) !important;
+  }
+  .input-error::placeholder {
+    color: #ff4444;
+    opacity: 0.8;
+  }
+  #toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+  .toast {
+    background: #111;
+    border-left: 4px solid var(--accent-color);
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    animation: slideIn 0.3s ease forwards;
+    opacity: 0;
+    transform: translateX(100%);
+    font-size: 0.95rem;
+    pointer-events: auto;
+  }
+  .toast.error {
+    border-left-color: #ff4444;
+  }
+  @keyframes slideIn {
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .toast.fade-out {
+    animation: fadeOut 0.3s ease forwards;
+  }
+  @keyframes fadeOut {
+    to { opacity: 0; transform: translateX(100%); }
+  }
+</style>
