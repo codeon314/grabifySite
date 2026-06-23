@@ -39,6 +39,16 @@ a:hover {
   color: #000000;
 }
 
+/* Fix for browser autofill turning inputs white */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #111 inset !important;
+  -webkit-text-fill-color: var(--text-color) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 /* Code block styles kept if needed */
 .code-block-wrapper {
   background-color: #000000;

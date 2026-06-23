@@ -65,6 +65,16 @@ export async function onRequest(context) {
     return env.ASSETS.fetch(loginUrl);
   }
 
-  // 5. If authenticated, allow the request to proceed to the real app
+  // 5. CSRF Protection: Require custom header for API calls
+  if (path.startsWith('/api/') && path !== '/api/login' && path !== '/api/logout') {
+    if (request.headers.get('X-Requested-With') !== 'XMLHttpRequest') {
+      return new Response(JSON.stringify({ error: 'CSRF Validation Failed' }), { 
+        status: 403, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
+  }
+
+  // 6. If authenticated, allow the request to proceed to the real app
   return next();
 }

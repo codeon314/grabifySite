@@ -1,28 +1,33 @@
 ---
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
+
+const { title, hideNav = false } = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Grabify Manager | Mastercodeon</title>
+        <title>{title || "Grabify Manager | Mastercodeon"}</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <ClientRouter />
     </head>
     <body>
-        <header>
-            <button class="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="main-nav">
-                <span class="line"></span>
-                <span class="line"></span>
-                <span class="line"></span>
-            </button>
-            <nav id="main-nav">
-                <a href="/">Home</a>
-            </nav>
-        </header>
-        <div class="overlay"></div>
+        {!hideNav && (
+            <header>
+                <button class="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="main-nav">
+                    <span class="line"></span>
+                    <span class="line"></span>
+                    <span class="line"></span>
+                </button>
+                <nav id="main-nav">
+                    <a href="/">Home</a>
+                    <button id="logoutBtn" class="logout-btn">Logout</button>
+                </nav>
+            </header>
+            <div class="overlay"></div>
+        )}
         <slot />
     </body>
 </html>
@@ -41,6 +46,24 @@ import '../styles/global.css';
     font-size: 1.1rem;
     flex-wrap: wrap;
     justify-content: center;
+    align-items: center;
+  }
+
+  .logout-btn {
+    background: transparent;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+  }
+
+  .logout-btn:hover {
+    background: var(--accent-color);
+    color: #000;
   }
 
   .hamburger, .overlay {
@@ -123,21 +146,33 @@ import '../styles/global.css';
     const hamburger = document.querySelector('.hamburger');
     const nav = document.querySelector('#main-nav');
     const overlay = document.querySelector('.overlay');
-    const navLinks = nav.querySelectorAll('a');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-    const toggleMenu = () => {
-      const isOpen = nav.classList.toggle('is-open');
-      overlay.classList.toggle('is-open', isOpen);
-      hamburger.setAttribute('aria-expanded', isOpen);
-    };
+    if (logoutBtn) {
+      const newLogoutBtn = logoutBtn.cloneNode(true);
+      logoutBtn.replaceWith(newLogoutBtn);
+      newLogoutBtn.addEventListener('click', async () => {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+      });
+    }
 
     if (hamburger && nav && overlay) {
+      const navLinks = nav.querySelectorAll('a');
+      const toggleMenu = () => {
+        const isOpen = nav.classList.toggle('is-open');
+        overlay.classList.toggle('is-open', isOpen);
+        hamburger.setAttribute('aria-expanded', isOpen);
+      };
+
       hamburger.replaceWith(hamburger.cloneNode(true));
       overlay.replaceWith(overlay.cloneNode(true));
       const newHamburger = document.querySelector('.hamburger');
       const newOverlay = document.querySelector('.overlay');
+      
       newHamburger.addEventListener('click', toggleMenu);
       newOverlay.addEventListener('click', toggleMenu);
+      
       navLinks.forEach(link => {
         link.addEventListener('click', () => {
           if (nav.classList.contains('is-open')) toggleMenu();
