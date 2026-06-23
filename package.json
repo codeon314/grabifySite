@@ -1,0 +1,15 @@
+{
+  "name": "grabify-frontend",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev --host",
+    "build": "astro build",
+    "preview": "astro preview --port 4321 --host",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^6.3.0",
+    "@astrojs/cloudflare": "^11.0.0"
+  }
+}

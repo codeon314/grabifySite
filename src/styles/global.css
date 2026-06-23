@@ -1,0 +1,139 @@
+:root {
+  --bg-color: #000000;
+  --card-bg: #0A0A0A;
+  --text-color: #EDEDED;
+  --accent-color: #00E5FF;
+  --border-color: #1A1A1A;
+}
+
+html { 
+  background-color: var(--bg-color); 
+  color: var(--text-color); 
+  font-family: system-ui, sans-serif; 
+  scroll-behavior: smooth; 
+}
+
+body { 
+  margin: 0; 
+  padding: 2rem; 
+}
+
+main { 
+  max-width: 800px; 
+  margin: auto; 
+}
+
+a { 
+  color: var(--accent-color); 
+  text-decoration: none; 
+  transition: color 0.2s ease, text-shadow 0.2s ease; 
+}
+
+a:hover { 
+  color: #FFFFFF; 
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+}
+
+::selection {
+  background-color: var(--accent-color);
+  color: #000000;
+}
+
+/* Code block styles kept if needed */
+.code-block-wrapper {
+  background-color: #000000;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--card-bg);
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #9CA3AF;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.code-block-header:hover {
+  background-color: #111111;
+}
+
+.code-block-header:hover .collapse-icon {
+  color: var(--accent-color);
+}
+
+.code-lang {
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.code-btn {
+  background: none;
+  border: none;
+  color: #9CA3AF;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  transition: color 0.2s ease;
+  padding: 0;
+}
+
+.code-btn:hover {
+  color: var(--accent-color);
+}
+
+.collapse-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9CA3AF;
+  transition: transform 0.3s ease, color 0.2s ease;
+}
+
+.collapse-icon.is-collapsed {
+  transform: rotate(180deg);
+}
+
+.code-block-grid {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.3s ease-in-out;
+}
+
+.code-block-grid.is-collapsed {
+  grid-template-rows: 0fr;
+}
+
+.code-block-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.code-block-content pre, .hljs {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  background: #000000 !important; 
+}
+
+@media (max-width: 768px) { 
+  body { 
+    padding: 1rem; 
+  } 
+}
