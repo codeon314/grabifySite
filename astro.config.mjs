@@ -5,6 +5,8 @@ import cloudflare from '@astrojs/cloudflare';
 export default defineConfig({
   output: 'server',
   adapter: cloudflare({
-    mode: 'directory'        // <--- required for Cloudflare Pages
+    mode: 'directory',
+    imageService: 'passthrough',   // no image binding required
+    // session: { enabled: false }  // optional, but omitting it works
   })
 });
