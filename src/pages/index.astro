@@ -892,6 +892,7 @@ import Layout from '../layouts/Layout.astro';
     });
 
     document.getElementById('copyQrBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
       const size = document.getElementById('qrSize').value;
       // Always fetch as PNG for clipboard compatibility
       const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${size}&format=png&data=${encodeURIComponent(currentQrUrl)}`;
@@ -901,7 +902,7 @@ import Layout from '../layouts/Layout.astro';
         const item = new ClipboardItem({ 'image/png': blob });
         await navigator.clipboard.write([item]);
         showToast('QR Code copied to clipboard!');
-        setButtonCopied(e.currentTarget, 'Copied QR Code');
+        setButtonCopied(btn, 'Copied QR Code');
       } catch (err) {
         showToast('Failed to copy QR Code.', true);
       }
@@ -1233,12 +1234,13 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('applyDestBtn').addEventListener('click', changeDestination);
 
     document.getElementById('copyUrlBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
       const url = document.getElementById('newUrl').value;
       if (!url) return;
       try {
         await navigator.clipboard.writeText(url);
         showToast('URL copied to clipboard!');
-        setButtonCopied(e.currentTarget, 'Copied');
+        setButtonCopied(btn, 'Copied');
       } catch (err) {
         showToast('Failed to copy URL.', true);
       }
@@ -1276,12 +1278,13 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('imgLoadBtn').addEventListener('click', imgLoadExisting);
     document.getElementById('imgApplyCustomBtn').addEventListener('click', imgApplyCustom);
     document.getElementById('imgCopyUrlBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
       const url = document.getElementById('imgNewUrl').value;
       if (!url) return;
       try { 
         await navigator.clipboard.writeText(url); 
         showToast('URL copied!'); 
-        setButtonCopied(e.currentTarget, 'Copied');
+        setButtonCopied(btn, 'Copied');
       } catch { 
         showToast('Copy failed', true); 
       }
@@ -1320,13 +1323,14 @@ import Layout from '../layouts/Layout.astro';
 
     // Single listener for the Copy Image button
     document.getElementById('copyImageBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
       const blob = imageSelectedRowData ? imageGeneratedCanvasBlob : generatedCanvasBlob;
       if (!blob) return;
       try {
         const item = new ClipboardItem({ 'image/png': blob });
         await navigator.clipboard.write([item]);
         showToast('Image copied!');
-        setButtonCopied(e.currentTarget, 'Copied Image');
+        setButtonCopied(btn, 'Copied Image');
       } catch { showToast('Copy failed', true); }
     });
 
@@ -1400,8 +1404,8 @@ import Layout from '../layouts/Layout.astro';
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0;
   }
-  .tab-btn {
-    background: none;
+  button.tab-btn {
+    background: transparent;
     border: none;
     color: #9CA3AF;
     font-size: 1.1rem;
@@ -1412,11 +1416,17 @@ import Layout from '../layouts/Layout.astro';
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
   }
-  .tab-btn:hover {
+  button.tab-btn:hover:not(:disabled) {
     color: #E5E7EB;
     background: rgba(255, 255, 255, 0.03);
+    transform: none;
+    box-shadow: none;
   }
-  .tab-btn.active {
+  button.tab-btn:active:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+  button.tab-btn.active {
     color: var(--accent-color);
     border-bottom: 2px solid var(--accent-color);
     background: rgba(0, 229, 255, 0.05);
@@ -1552,6 +1562,7 @@ import Layout from '../layouts/Layout.astro';
 
   /* Base input/button */
   input[type="text"], input[type="password"], button {
+    box-sizing: border-box;
     background-color: #111;
     border: 1px solid var(--border-color);
     color: var(--text-color);
