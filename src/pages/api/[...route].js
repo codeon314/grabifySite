@@ -69,26 +69,26 @@ export const POST = async ({ request, url, locals }) => {
   }
 
   // --- SECURE LOGIN HANDLER ---
-//   if (route === 'login') {
-//     const { password } = body;
-//     const runtimeEnv = locals.runtime?.env || (typeof process !== 'undefined' ? process.env : {});
-//     const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || (import.meta.env ? import.meta.env.SITE_PASSWORD : null) || 'dev';
+  if (route === 'login') {
+    const { password } = body;
+    const runtimeEnv = locals.runtime?.env || (typeof process !== 'undefined' ? process.env : {});
+    const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || (import.meta.env ? import.meta.env.SITE_PASSWORD : null) || 'dev';
     
-//     if (password === SITE_PASSWORD) {
-//       return new Response(JSON.stringify({ success: true }), {
-//         status: 200,
-//         headers: {
-//           'Content-Type': 'application/json',
-//           'Set-Cookie': `site_auth=${password}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
-//         }
-//       });
-//     } else {
-//       return new Response(JSON.stringify({ error: 'Invalid password' }), {
-//         status: 401,
-//         headers: { 'Content-Type': 'application/json' }
-//       });
-//     }
-//   }
+    if (password === SITE_PASSWORD) {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Set-Cookie': `site_auth=${password}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
+        }
+      });
+    } else {
+      return new Response(JSON.stringify({ error: 'Invalid password' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  }
 
   // --- GRABIFY API HANDLERS ---
   const cookieHeader = request.headers.get('Cookie');
@@ -236,8 +236,8 @@ export const POST = async ({ request, url, locals }) => {
   return new Response(JSON.stringify(responseBody), init);
 };
 
-export const GET = async ({ url }) => {
-  return new Response(JSON.stringify({ error: `GET method not supported for ${url.pathname}. Please use POST.` }), {
+export const ALL = async ({ request, url }) => {
+  return new Response(JSON.stringify({ error: `Method ${request.method} not allowed on ${url.pathname}. Use POST.` }), {
     status: 405,
     headers: { 'Content-Type': 'application/json' }
   });
