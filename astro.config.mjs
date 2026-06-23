@@ -1,12 +1,10 @@
+// astro.config.mjs
 import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
   output: 'server',
-  adapter: cloudflare(),
-  vite: {
-    ssr: {
-      noExternal: ['@astrojs/cloudflare']
-    }
-  }
+  adapter: cloudflare({
+    mode: 'directory'        // <--- required for Cloudflare Pages
+  })
 });

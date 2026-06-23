@@ -1,4 +1,5 @@
 ---
+// src/pages/index.astro
 import Layout from '../layouts/Layout.astro';
 ---
 
@@ -106,7 +107,6 @@ import Layout from '../layouts/Layout.astro';
     margin: auto;
   }
 
-  /* Tabs */
   .tabs {
     display: flex;
     gap: 0.5rem;
@@ -130,7 +130,6 @@ import Layout from '../layouts/Layout.astro';
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Common groups */
   .input-group, .load-section, .info-group, .settings-group, .custom-group, .destination-group {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -348,7 +347,7 @@ import Layout from '../layouts/Layout.astro';
       try {
         const uri = new URL(data.shortLink);
         const host = uri.host;
-        const path = uri.pathname.replace(/^\//, '');
+        let path = uri.pathname.replace(/^\//, '');
         let fileExt = '';
         const dotIdx = path.lastIndexOf('.');
         if (dotIdx > 0 && path.indexOf('/') === -1) {
@@ -392,7 +391,7 @@ import Layout from '../layouts/Layout.astro';
       try {
         const uri = new URL(data.shortLink);
         const host = uri.host;
-        const path = uri.pathname.replace(/^\//, '');
+        let path = uri.pathname.replace(/^\//, '');
         let ext = '';
         const dotIdx = path.lastIndexOf('.');
         if (dotIdx > 0 && path.indexOf('/') === -1) {
@@ -511,7 +510,6 @@ import Layout from '../layouts/Layout.astro';
   function renderTable() {
     const thead = document.querySelector('#visitorsTable thead');
     const tbody = document.querySelector('#visitorsTable tbody');
-    // Rebuild header from all loaded data
     if (allSmartData.length === 0) {
       thead.innerHTML = '';
       tbody.innerHTML = '';
@@ -520,7 +518,6 @@ import Layout from '../layouts/Layout.astro';
     const columns = buildTableColumns(allSmartData);
     thead.innerHTML = '<tr>' + columns.map(col => `<th>${col}</th>`).join('') + '</tr>';
 
-    // Rebuild rows
     tbody.innerHTML = '';
     allSmartData.forEach((rowData, idx) => {
       const tr = document.createElement('tr');
