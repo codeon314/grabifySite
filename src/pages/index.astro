@@ -314,7 +314,9 @@ if (Astro.cookies.has('site_auth')) {
 
         // ----- API calls -----
         async function apiCall(endpoint, body) {
-          const res = await fetch(endpoint, {
+          // Force trailing slash to prevent Cloudflare redirects from stripping POST method
+          const safeEndpoint = endpoint.endsWith('/') ? endpoint : endpoint + '/';
+          const res = await fetch(safeEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
@@ -788,7 +790,8 @@ if (Astro.cookies.has('site_auth')) {
       <main class="login-main">
         <div class="login-box">
           <h1 style="color: var(--accent-color); text-align: center; margin-bottom: 1.5rem;">Access Restricted</h1>
-          <div class="login-form" id="loginContainer" data-astro-reload>
+          <!-- Replaced form with div to physically prevent native browser submission -->
+          <div class="login-form" id="loginContainer">
             <input type="password" id="pwdInput" placeholder="Enter Password" required autofocus />
             <button type="button" id="loginBtn">Login</button>
           </div>
@@ -829,14 +832,14 @@ if (Astro.cookies.has('site_auth')) {
           btn.textContent = 'Checking...';
 
           try {
-            const res = await fetch('/api/login', {
+            // Added trailing slash to prevent Cloudflare from stripping the POST method via redirect
+            const res = await fetch('/api/login/', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ password })
             });
 
             if (res.ok) {
-              // Force a clean GET navigation to prevent browser from resubmitting state
               window.location.href = '/';
             } else {
               pwdInput.classList.add('input-error');
@@ -857,17 +860,16 @@ if (Astro.cookies.has('site_auth')) {
           }
         }
 
+        // Attach listeners directly to the elements
         document.getElementById('pwdInput').addEventListener('keydown', function(e) {
           if (e.key === 'Enter') {
             e.preventDefault();
-            e.stopPropagation();
             handleLogin();
           }
         });
 
         document.getElementById('loginBtn').addEventListener('click', function(e) {
           e.preventDefault();
-          e.stopPropagation();
           handleLogin();
         });
       </script>
