@@ -1,4 +1,3 @@
-// functions/[[route]].js
 const GRABIFY_BASE = 'https://grabify.org';
 
 async function grabifyRequest(path, method, body, cookie) {
@@ -62,16 +61,7 @@ function parseCookies(cookieHeader) {
   return cookies;
 }
 
-export async function onRequestPost(context) {
-  const { request, env, next } = context;
-  const url = new URL(request.url);
-
-  // IMPORTANT: If this is NOT an API request, pass it along.
-  // This prevents the JSON parser from crashing on normal page loads.
-  if (!url.pathname.startsWith('/api/')) {
-    return next();
-  }
-
+export const POST = async ({ request, url, locals }) => {
   const route = url.pathname.replace('/api/', '');
   
   // Safely parse JSON body
@@ -85,7 +75,8 @@ export async function onRequestPost(context) {
   // --- SECURE LOGIN HANDLER ---
   if (route === 'login') {
     const { password } = body;
-    const SITE_PASSWORD = env.SITE_PASSWORD || 'dev';
+    const runtimeEnv = locals.runtime?.env || process.env;
+    const SITE_PASSWORD = runtimeEnv?.SITE_PASSWORD || import.meta.env.SITE_PASSWORD || 'dev';
     
     if (password === SITE_PASSWORD) {
       return new Response(JSON.stringify({ success: true }), {
