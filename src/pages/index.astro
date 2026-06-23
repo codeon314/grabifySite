@@ -220,8 +220,8 @@ import Layout from '../layouts/Layout.astro';
     font-size: 1.1rem;
   }
 
-  /* Base input/select/button */
-  input[type="text"], select, button {
+  /* Base input/button */
+  input[type="text"], button {
     background-color: #111;
     border: 1px solid var(--border-color);
     color: var(--text-color);
@@ -231,13 +231,23 @@ import Layout from '../layouts/Layout.astro';
     font-size: 0.95rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  input[type="text"]:hover, select:hover {
+  input[type="text"]:hover {
     border-color: #4B5563;
   }
-  input[type="text"]:focus, select:focus {
+  input[type="text"]:focus {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
+  }
+
+  /* Fix for browser autofill turning inputs white */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #111 inset !important;
+    -webkit-text-fill-color: var(--text-color) !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
   
   button {
@@ -305,34 +315,97 @@ import Layout from '../layouts/Layout.astro';
     transform: scale(1);
   }
 
-  /* Animated select dropdown */
-  select {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239CA3AF' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    padding-right: 2.5rem;
+  /* Custom Animated Select Dropdowns */
+  .custom-select-wrapper {
+    position: relative;
+    user-select: none;
+    flex: 1;
+    min-width: 130px;
+  }
+  .custom-select-trigger {
+    background-color: #111;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .custom-select-trigger:hover {
+    border-color: #4B5563;
+  }
+  .custom-select-wrapper.open .custom-select-trigger {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
+  }
+  .custom-select-trigger span {
+    display: inline-block;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  }
+  .custom-select-arrow {
+    display: flex;
+    align-items: center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .custom-select-trigger.open .custom-select-arrow {
+    transform: rotate(180deg);
+  }
+  .custom-select-options {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #111;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    z-index: 10;
+    max-height: 0;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0.4s;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+  .custom-select-wrapper.open .custom-select-options {
+    max-height: 250px;
+    opacity: 1;
+    visibility: visible;
+  }
+  .custom-option {
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    color: #D1D5DB;
+  }
+  .custom-option:hover {
+    background: #222;
+    color: var(--accent-color);
   }
 
-  /* Dark scrollbar for selects and table */
-  select::-webkit-scrollbar,
+  /* Dark scrollbar for custom selects and table */
+  .custom-select-options::-webkit-scrollbar,
   .visitors-table-container::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-  select::-webkit-scrollbar-track,
+  .custom-select-options::-webkit-scrollbar-track,
   .visitors-table-container::-webkit-scrollbar-track {
     background: #0A0A0A;
     border-radius: 4px;
   }
-  select::-webkit-scrollbar-thumb,
+  .custom-select-options::-webkit-scrollbar-thumb,
   .visitors-table-container::-webkit-scrollbar-thumb {
-    background: #2A2A2A;
+    background: #333;
     border-radius: 4px;
   }
-  select::-webkit-scrollbar-thumb:hover,
+  .custom-select-options::-webkit-scrollbar-thumb:hover,
   .visitors-table-container::-webkit-scrollbar-thumb:hover {
-    background: #444;
+    background: #555;
   }
 
   .visitors-toolbar {
@@ -356,58 +429,60 @@ import Layout from '../layouts/Layout.astro';
     border-radius: 6px;
   }
 
-  /* Rebuilt table to match modern data grids */
+  /* Rebuilt table to match C# DataGridView perfectly */
   .visitors-table-container {
     overflow: auto;
     max-height: 500px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: #0A0A0A;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid #444;
+    background: #1E1E1E;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
   table {
-    width: 100%;
+    width: max-content; /* Forces horizontal scroll instead of wrapping */
+    min-width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
     text-align: left;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
   th, td {
-    padding: 0.8rem 1rem;
-    border-bottom: 1px solid #1A1A1A;
-    white-space: nowrap;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #444; /* C# Grid lines */
+    white-space: nowrap !important; /* Strictly prevent wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 350px;
   }
   th {
-    background: #111;
-    color: var(--accent-color);
+    background: #333;
+    color: #FFF;
     position: sticky;
     top: 0;
     z-index: 2;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 2px solid var(--accent-color);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-weight: 500;
+    border-bottom: 2px solid #555;
   }
   td {
-    background: #0A0A0A;
-    color: #D1D5DB;
-    max-width: 250px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: #EAEAEA;
   }
-  tr:last-child td {
-    border-bottom: none;
+  tbody tr {
+    background: #1E1E1E; /* C# Row color */
+    transition: background-color 0.1s ease;
+  }
+  tbody tr:nth-child(even) {
+    background: #252526; /* C# Alternate row color */
+  }
+  /* Row hover effect (Windows Accent Blue) */
+  tbody tr:hover td {
+    background: #094771; 
+    color: #FFF;
+    cursor: default;
   }
   tr.bot-row td {
-    opacity: 0.4;
+    color: #888;
   }
-  /* Row hover effect */
-  tbody tr {
-    transition: background-color 0.2s ease;
-  }
-  tbody tr:hover td {
-    background: #151515;
-    color: #FFF;
+  tbody tr.bot-row:hover td {
+    color: #CCC;
   }
 
   /* Mobile Responsiveness */
@@ -416,7 +491,7 @@ import Layout from '../layouts/Layout.astro';
       flex-direction: column; 
       align-items: stretch; 
     }
-    .input-group button, .input-group select { 
+    .input-group button, .custom-select-wrapper { 
       width: 100%; 
     }
     .info-row { 
@@ -438,10 +513,6 @@ import Layout from '../layouts/Layout.astro';
     .toolbar-toggles {
       justify-content: space-between;
     }
-    th, td {
-      padding: 0.6rem 0.8rem;
-      font-size: 0.8rem;
-    }
   }
 </style>
 
@@ -462,6 +533,119 @@ import Layout from '../layouts/Layout.astro';
     opt.textContent = ext || '(none)';
     cmbExt.appendChild(opt);
   });
+
+  // ----- Custom Select Initialization -----
+  function initCustomSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    
+    select.style.display = 'none'; // Hide original select
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-select-wrapper';
+    
+    const trigger = document.createElement('div');
+    trigger.className = 'custom-select-trigger';
+    
+    const textContainer = document.createElement('div');
+    textContainer.style.overflow = 'hidden';
+    textContainer.style.position = 'relative';
+    textContainer.style.flex = '1';
+    textContainer.style.display = 'flex';
+    textContainer.style.alignItems = 'center';
+    
+    const triggerText = document.createElement('span');
+    triggerText.textContent = select.options[select.selectedIndex]?.text || '';
+    textContainer.appendChild(triggerText);
+    
+    const arrow = document.createElement('div');
+    arrow.className = 'custom-select-arrow';
+    arrow.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="#9CA3AF" d="M6 8L1 3h10z"/></svg>`;
+    
+    trigger.appendChild(textContainer);
+    trigger.appendChild(arrow);
+    wrapper.appendChild(trigger);
+    
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'custom-select-options';
+    
+    Array.from(select.options).forEach(opt => {
+      const optionDiv = document.createElement('div');
+      optionDiv.className = 'custom-option';
+      optionDiv.textContent = opt.text;
+      optionDiv.dataset.value = opt.value;
+      
+      optionDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (select.value !== opt.value) {
+          // Animate text sliding out
+          triggerText.style.transform = 'translateY(-150%)';
+          triggerText.style.opacity = '0';
+          
+          setTimeout(() => {
+            triggerText.textContent = opt.text;
+            triggerText.style.transition = 'none';
+            triggerText.style.transform = 'translateY(150%)';
+            void triggerText.offsetWidth; // Force reflow
+            
+            // Animate text sliding in
+            triggerText.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
+            triggerText.style.transform = 'translateY(0)';
+            triggerText.style.opacity = '1';
+            
+            select.value = opt.value;
+            select.dispatchEvent(new Event('change'));
+          }, 150);
+        }
+        wrapper.classList.remove('open');
+        trigger.classList.remove('open');
+      });
+      optionsContainer.appendChild(optionDiv);
+    });
+    
+    wrapper.appendChild(optionsContainer);
+    select.parentNode.insertBefore(wrapper, select.nextSibling);
+    
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = wrapper.classList.contains('open');
+      // Close all other open selects
+      document.querySelectorAll('.custom-select-wrapper').forEach(w => {
+        w.classList.remove('open');
+        w.querySelector('.custom-select-trigger').classList.remove('open');
+      });
+      if (!isOpen) {
+        wrapper.classList.add('open');
+        trigger.classList.add('open');
+      }
+    });
+    
+    // Store reference for programmatic updates
+    select._customSelectWrapper = wrapper;
+  }
+
+  // Initialize custom selects
+  initCustomSelect('cmbDomain');
+  initCustomSelect('cmbExtension');
+
+  // Close custom selects when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select-wrapper').forEach(w => {
+      w.classList.remove('open');
+      w.querySelector('.custom-select-trigger').classList.remove('open');
+    });
+  });
+
+  // Helper to update custom select UI when original select value changes programmatically
+  function updateCustomSelectUI(select) {
+    if (select && select._customSelectWrapper) {
+      const triggerText = select._customSelectWrapper.querySelector('.custom-select-trigger span');
+      const selectedOpt = select.options[select.selectedIndex];
+      if (selectedOpt && triggerText.textContent !== selectedOpt.text) {
+        triggerText.textContent = selectedOpt.text;
+      }
+    }
+  }
 
   // ----- State -----
   let currentCode = null;
@@ -557,9 +741,15 @@ import Layout from '../layouts/Layout.astro';
         }
         const savedExt = getSavedExtension(code);
         const finalExt = savedExt || fileExt;
-        document.getElementById('cmbDomain').value = host;
+        
+        const cmbDomain = document.getElementById('cmbDomain');
+        cmbDomain.value = host;
+        updateCustomSelectUI(cmbDomain);
+        
         document.getElementById('txtPath').value = path;
+        
         cmbExt.value = extensions.includes(finalExt) ? finalExt : '';
+        updateCustomSelectUI(cmbExt);
       } catch {}
 
       // Also set the result field
@@ -601,9 +791,15 @@ import Layout from '../layouts/Layout.astro';
         }
         const saved = getSavedExtension(code);
         const finalExt = saved || ext;
-        document.getElementById('cmbDomain').value = host;
+        
+        const cmbDomain = document.getElementById('cmbDomain');
+        cmbDomain.value = host;
+        updateCustomSelectUI(cmbDomain);
+        
         document.getElementById('txtPath').value = path;
+        
         cmbExt.value = extensions.includes(finalExt) ? finalExt : '';
+        updateCustomSelectUI(cmbExt);
       } catch {}
     } catch (e) {
       console.error('refreshLinkInfo failed:', e);
