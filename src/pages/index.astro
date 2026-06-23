@@ -347,7 +347,7 @@ import Layout from '../layouts/Layout.astro';
     btn.disabled = true;
     btn.textContent = 'Loading...';
     try {
-      const data = await apiCall('/api/load', { code });
+      const data = await apiCall('/api/load?debug=1', { code });
       document.getElementById('originalUrl').value = data.originalUrl;
       document.getElementById('newUrl').value = data.shortLink;
       document.getElementById('trackingCode').value = data.trackingCode;
