@@ -63,17 +63,39 @@ function parseCookies(cookieHeader) {
 }
 
 export async function onRequestPost(context) {
-  const { request, next } = context;
+  const { request, env, next } = context;
   const url = new URL(request.url);
 
-  // IMPORTANT FIX: If this is NOT an API request, pass it to Astro SSR!
-  // This prevents the JSON parser from crashing on the login form submission.
   if (!url.pathname.startsWith('/api/')) {
     return next();
   }
 
   const route = url.pathname.replace('/api/', '');
+  const body = await request.json();
 
+  // --- SECURE LOGIN HANDLER ---
+  if (route === 'login') {
+    const { password } = body;
+    const SITE_PASSWORD = env.SITE_PASSWORD || 'dev';
+    
+    if (password === SITE_PASSWORD) {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          // Set secure auth cookie valid for 7 days
+          'Set-Cookie': `site_auth=${password}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
+        }
+      });
+    } else {
+      return new Response(JSON.stringify({ error: 'Invalid password' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  // --- GRABIFY API HANDLERS ---
   const cookieHeader = request.headers.get('Cookie');
   const cookies = parseCookies(cookieHeader);
   let confirmation = cookies['grabify_confirmation'];
@@ -82,8 +104,6 @@ export async function onRequestPost(context) {
     confirmation = `auto_${crypto.randomUUID().replace(/-/g, '')}`;
     newCookieSet = true;
   }
-
-  const body = await request.json();
 
   let responseBody;
   try {
@@ -109,12 +129,10 @@ export async function onRequestPost(context) {
         const htmlRes = await grabifyRequest(`/track/${code}/`, 'GET', null, `confirmation=${confirmation}`);
         const html = htmlRes.text;
 
-        // Debug mode (add ?debug=1 to the API URL) — now we know it works
         if (url.searchParams.get('debug') === '1') {
           return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
         }
 
-        // C#-compatible regex
         const extract = (pattern) => {
           const match = html.match(new RegExp(pattern, 'i'));
           return match ? match[1].trim() : '';
