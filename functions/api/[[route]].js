@@ -84,9 +84,9 @@ export async function onRequestPost(context) {
     switch (route) {
       case 'create': {
         const { url: targetUrl, type = 'shorten' } = body;
-        if (!targetUrl) return new Response(JSON.stringify({ error: 'URL required' }), { status: 400 });
+        if (type === 'shorten' && !targetUrl) return new Response(JSON.stringify({ error: 'URL required' }), { status: 400 });
         const formData = new URLSearchParams();
-        formData.append('url', targetUrl);
+        formData.append('url', targetUrl || '');
         formData.append('type', type);          // "shorten" or "pixel"
         const result = await grabifyRequest(
           type === 'pixel' ? '/main/' : '/',

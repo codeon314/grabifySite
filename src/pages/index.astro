@@ -92,8 +92,7 @@ import Layout from '../layouts/Layout.astro';
     <div id="tab-image" class="tab-panel">
       <div class="input-group-container">
         <div class="input-group">
-          <input type="text" id="imgUrlInput" placeholder="Enter destination URL (https://...)" />
-          <button id="imgCreateBtn">Generate Tracking Pixel</button>
+          <button id="imgCreateBtn" style="flex: 1;">Generate Tracking Pixel</button>
         </div>
         <input type="text" id="imgResultLink" readonly placeholder="Tracking pixel link will appear here..." />
       </div>
@@ -399,7 +398,10 @@ import Layout from '../layouts/Layout.astro';
     async function apiCall(endpoint, body) {
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         body: JSON.stringify(body)
       });
       const json = await res.json();
@@ -804,15 +806,11 @@ import Layout from '../layouts/Layout.astro';
     }
 
     async function imgCreateLink() {
-      const url = document.getElementById('imgUrlInput').value.trim();
-      if (!url) return showToast('Enter a destination URL.', true);
-      try { new URL(url); } catch { return showToast('Invalid URL (include http:// or https://)', true); }
-
       const btn = document.getElementById('imgCreateBtn');
       btn.disabled = true;
       btn.textContent = 'Generating...';
       try {
-        const data = await apiCall('/api/create', { url, type: 'pixel' });
+        const data = await apiCall('/api/create', { type: 'pixel' });
         document.getElementById('imgResultLink').value = data.go;
         currentImageCode = data.code;
         if (currentImageCode) await imgRefreshLinkInfo(currentImageCode);
