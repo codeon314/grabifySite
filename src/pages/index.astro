@@ -205,6 +205,13 @@ import Layout from '../layouts/Layout.astro';
   <div id="toast-container"></div>
 
   <script is:inline>
+    // ----- Register Service Worker for Android Notifications -----
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.warn('Service Worker registration failed:', err);
+      });
+    }
+
     // ----- Custom Toast Alerts -----
     function showToast(message, isError = false) {
       const container = document.getElementById('toast-container');
@@ -220,6 +227,30 @@ import Layout from '../layouts/Layout.astro';
         toast.classList.add('fade-out');
         toast.addEventListener('animationend', () => toast.remove());
       }, 3000);
+    }
+
+    // ----- Native Notification Helper -----
+    async function sendNotification(title, options) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') {
+        showToast(`${title} - ${options.body}`);
+        return;
+      }
+
+      try {
+        // Try Service Worker first (Required for Android Chrome)
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && reg.showNotification) {
+            await reg.showNotification(title, options);
+            return;
+          }
+        }
+        // Fallback to standard Notification API (Desktop)
+        new Notification(title, options);
+      } catch (e) {
+        console.warn('Native notification failed, using toast fallback', e);
+        showToast(`${title} - ${options.body}`);
+      }
     }
 
     // ----- Extensions list (must match C# app) -----
@@ -698,13 +729,13 @@ import Layout from '../layouts/Layout.astro';
         allSmartData.push(...newData);
         renderTable();
 
-        if (!full && newData.length > 0 && Notification.permission === 'granted') {
+        if (!full && newData.length > 0) {
           const latest = newData[newData.length - 1];
           const ip = latest.ip || 'Unknown IP';
           const city = latest.city || 'Unknown City';
           const country = latest.country || 'Unknown Country';
           
-          new Notification(`New Visitor: ${ip}`, {
+          await sendNotification(`New Visitor: ${ip}`, {
             body: `Location: ${city}, ${country}\nTotal Clicks: ${clicks} | Unique: ${unique}`,
             icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzAwRTVGRiIvPjwvc3ZnPg=='
           });
@@ -1025,11 +1056,15 @@ import Layout from '../layouts/Layout.astro';
         imageAllSmartData.push(...newData);
         imgRenderTable();
 
-        if (!full && newData.length > 0 && Notification.permission === 'granted') {
+        if (!full && newData.length > 0) {
           const latest = newData[newData.length - 1];
-          new Notification(`New Visitor: ${latest.ip || 'Unknown IP'}`, {
-            body: `Location: ${latest.city || '?'}, ${latest.country || '?'}\nClicks: ${clicks} / Unique: ${unique}`,
-            icon: 'data:image/svg+xml;base64,...'
+          const ip = latest.ip || 'Unknown IP';
+          const city = latest.city || '?';
+          const country = latest.country || '?';
+
+          await sendNotification(`New Visitor: ${ip}`, {
+            body: `Location: ${city}, ${country}\nClicks: ${clicks} / Unique: ${unique}`,
+            icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzAwRTVGRiIvPjwvc3ZnPg=='
           });
         }
       } catch (e) {
@@ -1120,7 +1155,7 @@ import Layout from '../layouts/Layout.astro';
 
     document.getElementById('chkAutoRefresh').addEventListener('change', function() {
       if (this.checked) {
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
           Notification.requestPermission();
         }
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
@@ -1146,7 +1181,9 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('imgChkHideBots').addEventListener('change', imgApplyBotFilter);
     document.getElementById('imgChkAutoRefresh').addEventListener('change', function() {
       if (this.checked) {
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') Notification.requestPermission();
+        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+          Notification.requestPermission();
+        }
         if (imageAutoRefreshTimer) clearInterval(imageAutoRefreshTimer);
         imageAutoRefreshTimer = setInterval(() => imgRefreshVisitors(false), 7500);
       } else {
