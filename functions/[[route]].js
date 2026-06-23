@@ -1,4 +1,4 @@
-// functions/api/[[route]].js
+// functions/[[route]].js
 const GRABIFY_BASE = 'https://grabify.org';
 
 async function grabifyRequest(path, method, body, cookie) {
@@ -63,8 +63,15 @@ function parseCookies(cookieHeader) {
 }
 
 export async function onRequestPost(context) {
-  const { request } = context;
+  const { request, next } = context;
   const url = new URL(request.url);
+
+  // IMPORTANT FIX: If this is NOT an API request, pass it to Astro SSR!
+  // This prevents the JSON parser from crashing on the login form submission.
+  if (!url.pathname.startsWith('/api/')) {
+    return next();
+  }
+
   const route = url.pathname.replace('/api/', '');
 
   const cookieHeader = request.headers.get('Cookie');
