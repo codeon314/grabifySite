@@ -38,7 +38,10 @@ import Layout from '../layouts/Layout.astro';
         </div>
         <div class="info-row">
           <label>New URL:</label>
-          <input type="text" id="newUrl" readonly />
+          <div class="input-group" style="flex: 1;">
+            <input type="text" id="newUrl" readonly />
+            <button id="copyUrlBtn" title="Copy to clipboard">Copy</button>
+          </div>
         </div>
         <div class="info-row">
           <label>Tracking Code:</label>
@@ -90,6 +93,7 @@ import Layout from '../layouts/Layout.astro';
       <div class="visitors-toolbar">
         <span id="clicksInfo">Clicks/Unique: 0/0</span>
         <button id="refreshVisitorsBtn">Refresh Visitors</button>
+        <button id="generateImageBtn" disabled>Generate Image</button>
         <div class="toolbar-toggles">
           <label><input type="checkbox" id="chkHideBots" /> Hide Bots</label>
           <label><input type="checkbox" id="chkAutoRefresh" /> Auto Refresh</label>
@@ -103,11 +107,23 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </main>
+
+  <!-- IMAGE PREVIEW MODAL -->
+  <div id="imageModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Visitor Details Image</h3>
+      <div class="modal-image-container">
+        <img id="previewImage" src="" alt="Generated Visitor Data" />
+      </div>
+      <div class="modal-actions">
+        <button id="copyImageBtn">Copy Image</button>
+        <button id="closeModalBtn" style="background-color: #333; color: #FFF;">Close</button>
+      </div>
+    </div>
+  </div>
 </Layout>
 
 <style is:global>
-  /* Using is:global so dynamically created JS elements (like custom dropdowns) receive styling */
-  
   main {
     max-width: 900px;
     margin: auto;
@@ -262,18 +278,20 @@ import Layout from '../layouts/Layout.astro';
     align-items: center;
     justify-content: center;
   }
-  button:hover {
+  button:hover:not(:disabled) {
     background-color: #00cce0;
     transform: translateY(-2px);
     box-shadow: 0 6px 15px rgba(0, 229, 255, 0.3);
   }
-  button:active {
+  button:active:not(:disabled) {
     transform: translateY(1px) scale(0.96);
     box-shadow: 0 2px 4px rgba(0, 229, 255, 0.2);
   }
   button:disabled {
-    opacity: 0.6;
+    opacity: 0.4;
     cursor: not-allowed;
+    background-color: #333;
+    color: #888;
     transform: none;
     box-shadow: none;
   }
@@ -365,7 +383,7 @@ import Layout from '../layouts/Layout.astro';
     background: #111;
     border: 1px solid var(--accent-color);
     border-radius: 6px;
-    z-index: 999; /* Ensure it floats above everything */
+    z-index: 999;
     max-height: 0;
     overflow-y: auto;
     opacity: 0;
@@ -393,7 +411,7 @@ import Layout from '../layouts/Layout.astro';
     color: var(--accent-color);
   }
 
-  /* Dark scrollbar for custom selects and table */
+  /* Dark scrollbar */
   .custom-select-options::-webkit-scrollbar,
   .visitors-table-container::-webkit-scrollbar {
     width: 8px;
@@ -435,7 +453,7 @@ import Layout from '../layouts/Layout.astro';
     border-radius: 6px;
   }
 
-  /* Rebuilt table to match theme with proper spacing and grid lines */
+  /* Table Styling */
   .visitors-table-container {
     overflow: auto;
     max-height: 500px;
@@ -446,15 +464,15 @@ import Layout from '../layouts/Layout.astro';
   }
   table {
     width: 100%;
-    min-width: max-content; /* Forces horizontal scroll instead of wrapping */
+    min-width: max-content;
     border-collapse: collapse;
     font-size: 0.9rem;
     text-align: left;
   }
   th, td {
-    padding: 0.8rem 1.2rem; /* Generous padding for readability */
-    border: 1px solid #2A2A2A; /* Visible grid lines */
-    white-space: nowrap !important; /* Strictly prevent wrapping */
+    padding: 0.8rem 1.2rem;
+    border: 1px solid #2A2A2A;
+    white-space: nowrap !important;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 350px;
@@ -475,22 +493,79 @@ import Layout from '../layouts/Layout.astro';
   }
   tbody tr {
     background: #0A0A0A;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, border 0.2s ease;
+    cursor: pointer;
   }
   tbody tr:nth-child(even) {
-    background: #111; /* Alternate row color */
+    background: #111;
   }
-  /* Row hover effect matching the cyan theme */
   tbody tr:hover td {
     background: rgba(0, 229, 255, 0.08); 
     color: #FFF;
-    cursor: default;
+  }
+  /* Selected Row Styling */
+  tbody tr.selected td {
+    background: rgba(0, 229, 255, 0.15);
+    border-top: 1px solid var(--accent-color);
+    border-bottom: 1px solid var(--accent-color);
+    color: #FFF;
   }
   tr.bot-row td {
     color: #6B7280;
   }
   tbody tr.bot-row:hover td {
     color: #9CA3AF;
+  }
+
+  /* Modal Styling */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  .modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+  .modal-content {
+    background: #111;
+    border: 1px solid var(--accent-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 90%;
+    box-shadow: 0 10px 30px rgba(0, 229, 255, 0.2);
+    transform: translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .modal-overlay.active .modal-content {
+    transform: translateY(0);
+  }
+  .modal-image-container {
+    margin: 1.5rem 0;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    justify-content: center;
+  }
+  .modal-image-container img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
   }
 
   /* Mobile Responsiveness */
@@ -547,7 +622,7 @@ import Layout from '../layouts/Layout.astro';
     const select = document.getElementById(selectId);
     if (!select) return;
     
-    select.style.display = 'none'; // Hide original select
+    select.style.display = 'none';
     
     const wrapper = document.createElement('div');
     wrapper.className = 'custom-select-wrapper';
@@ -586,7 +661,6 @@ import Layout from '../layouts/Layout.astro';
       optionDiv.addEventListener('click', (e) => {
         e.stopPropagation();
         if (select.value !== opt.value) {
-          // Animate text sliding out
           triggerText.style.transform = 'translateY(-150%)';
           triggerText.style.opacity = '0';
           
@@ -594,9 +668,8 @@ import Layout from '../layouts/Layout.astro';
             triggerText.textContent = opt.text;
             triggerText.style.transition = 'none';
             triggerText.style.transform = 'translateY(150%)';
-            void triggerText.offsetWidth; // Force reflow
+            void triggerText.offsetWidth;
             
-            // Animate text sliding in
             triggerText.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
             triggerText.style.transform = 'translateY(0)';
             triggerText.style.opacity = '1';
@@ -617,7 +690,6 @@ import Layout from '../layouts/Layout.astro';
     trigger.addEventListener('click', (e) => {
       e.stopPropagation();
       const isOpen = wrapper.classList.contains('open');
-      // Close all other open selects
       document.querySelectorAll('.custom-select-wrapper').forEach(w => {
         w.classList.remove('open');
         w.querySelector('.custom-select-trigger').classList.remove('open');
@@ -628,15 +700,12 @@ import Layout from '../layouts/Layout.astro';
       }
     });
     
-    // Store reference for programmatic updates
     select._customSelectWrapper = wrapper;
   }
 
-  // Initialize custom selects
   initCustomSelect('cmbDomain');
   initCustomSelect('cmbExtension');
 
-  // Close custom selects when clicking outside
   document.addEventListener('click', () => {
     document.querySelectorAll('.custom-select-wrapper').forEach(w => {
       w.classList.remove('open');
@@ -644,7 +713,6 @@ import Layout from '../layouts/Layout.astro';
     });
   });
 
-  // Helper to update custom select UI when original select value changes programmatically
   function updateCustomSelectUI(select) {
     if (select && select._customSelectWrapper) {
       const triggerText = select._customSelectWrapper.querySelector('.custom-select-trigger span');
@@ -660,6 +728,8 @@ import Layout from '../layouts/Layout.astro';
   let loadedIndices = new Set();
   let allSmartData = [];
   let autoRefreshTimer = null;
+  let selectedRowData = null;
+  let generatedCanvasBlob = null;
 
   // ----- Helper: extract code from URL -----
   function extractCodeFromUrl(url) {
@@ -736,7 +806,6 @@ import Layout from '../layouts/Layout.astro';
       document.getElementById('chkForwarding').checked = data.forwarding;
       document.getElementById('chkPreview').checked = data.preview;
 
-      // Parse current short link to set domain/path/extension
       try {
         const uri = new URL(data.shortLink);
         const host = uri.host;
@@ -761,10 +830,7 @@ import Layout from '../layouts/Layout.astro';
         updateCustomSelectUI(cmbExtEl);
       } catch {}
 
-      // Also set the result field
       document.getElementById('resultLink').value = data.shortLink;
-
-      // Refresh visitors tab
       await refreshVisitors(true);
     } catch (e) {
       alert('Error: ' + e.message);
@@ -930,11 +996,20 @@ import Layout from '../layouts/Layout.astro';
       const tr = document.createElement('tr');
       const isBot = String(rowData.bot) === '1' || String(rowData.bot) === 'True';
       tr.classList.toggle('bot-row', isBot);
+      
+      // Row selection logic
+      tr.addEventListener('click', () => {
+        document.querySelectorAll('#visitorsTable tbody tr').forEach(r => r.classList.remove('selected'));
+        tr.classList.add('selected');
+        selectedRowData = rowData;
+        document.getElementById('generateImageBtn').disabled = false;
+      });
+
       columns.forEach(col => {
         const td = document.createElement('td');
         const cellValue = rowData[col] !== undefined ? rowData[col] : '';
         td.textContent = cellValue;
-        if (cellValue) td.title = cellValue; // Add tooltip for truncated text
+        if (cellValue) td.title = cellValue;
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -962,6 +1037,8 @@ import Layout from '../layouts/Layout.astro';
       if (full) {
         loadedIndices.clear();
         allSmartData = [];
+        selectedRowData = null;
+        document.getElementById('generateImageBtn').disabled = true;
       }
       const { clicks, unique, indices } = await fetchAllVisitors(currentCode);
       document.getElementById('clicksInfo').textContent = `Clicks/Unique: ${clicks}/${unique}`;
@@ -980,6 +1057,20 @@ import Layout from '../layouts/Layout.astro';
       }
       allSmartData.push(...newData);
       renderTable();
+
+      // Push Notification Logic (only if not initial full load)
+      if (!full && newData.length > 0 && Notification.permission === 'granted') {
+        const latest = newData[newData.length - 1];
+        const ip = latest.ip || 'Unknown IP';
+        const city = latest.city || 'Unknown City';
+        const country = latest.country || 'Unknown Country';
+        
+        new Notification(`New Visitor: ${ip}`, {
+          body: `Location: ${city}, ${country}\nTotal Clicks: ${clicks} | Unique: ${unique}`,
+          icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzAwRTVGRiIvPjwvc3ZnPg=='
+        });
+      }
+
     } catch (e) {
       alert('Visitor refresh failed: ' + e.message);
     } finally {
@@ -988,21 +1079,112 @@ import Layout from '../layouts/Layout.astro';
     }
   }
 
-  // ----- Tab switching -----
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+  // ----- Image Generation Logic -----
+  function generateVisitorImage() {
+    if (!selectedRowData) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 450;
+    canvas.height = 520;
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = '#0A0A0A';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Header
+    ctx.fillStyle = '#00E5FF';
+    ctx.font = 'bold 22px system-ui, sans-serif';
+    ctx.fillText('Visitor Details', 25, 45);
+
+    // Separator line
+    ctx.strokeStyle = '#2A2A2A';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(25, 65);
+    ctx.lineTo(425, 65);
+    ctx.stroke();
+
+    // Fields to render
+    const fields = ['date', 'ip', 'isp', 'country', 'city', 'state', 'browser', 'platform', 'latitude', 'longitude', 'accuracy', 'accuracy-radius'];
+    let y = 105;
+
+    fields.forEach(field => {
+      // Label
+      ctx.fillStyle = '#9CA3AF';
+      ctx.font = '600 14px system-ui, sans-serif';
+      ctx.fillText(field.toUpperCase() + ':', 25, y);
+
+      // Value
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '14px system-ui, sans-serif';
+      const val = selectedRowData[field] || 'N/A';
+      
+      // Truncate if too long
+      let displayVal = String(val);
+      if (ctx.measureText(displayVal).width > 250) {
+        while (ctx.measureText(displayVal + '...').width > 250 && displayVal.length > 0) {
+          displayVal = displayVal.slice(0, -1);
+        }
+        displayVal += '...';
+      }
+      
+      ctx.fillText(displayVal, 160, y);
+      y += 34;
     });
-  });
+
+    // Set to preview
+    const dataUrl = canvas.toDataURL('image/png');
+    document.getElementById('previewImage').src = dataUrl;
+    
+    // Store blob for copying
+    canvas.toBlob(blob => {
+      generatedCanvasBlob = blob;
+    }, 'image/png');
+
+    // Show Modal
+    document.getElementById('imageModal').classList.add('active');
+  }
 
   // ----- Event listeners -----
   document.getElementById('createBtn').addEventListener('click', createLink);
   document.getElementById('loadBtn').addEventListener('click', loadExisting);
   document.getElementById('applyCustomBtn').addEventListener('click', applyCustom);
   document.getElementById('applyDestBtn').addEventListener('click', changeDestination);
+
+  // Copy URL Button
+  document.getElementById('copyUrlBtn').addEventListener('click', async () => {
+    const url = document.getElementById('newUrl').value;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      const btn = document.getElementById('copyUrlBtn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = originalText, 2000);
+    } catch (err) {
+      alert('Failed to copy URL.');
+    }
+  });
+
+  // Image Generation & Modal
+  document.getElementById('generateImageBtn').addEventListener('click', generateVisitorImage);
+  document.getElementById('closeModalBtn').addEventListener('click', () => {
+    document.getElementById('imageModal').classList.remove('active');
+  });
+  document.getElementById('copyImageBtn').addEventListener('click', async () => {
+    if (!generatedCanvasBlob) return;
+    try {
+      const item = new ClipboardItem({ 'image/png': generatedCanvasBlob });
+      await navigator.clipboard.write([item]);
+      const btn = document.getElementById('copyImageBtn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = originalText, 2000);
+    } catch (err) {
+      alert('Failed to copy image. Your browser might not support copying images directly.');
+    }
+  });
 
   // Settings checkboxes auto-save on change
   ['chkSmartLogger','chkConsent','chkGPS','chkForwarding','chkPreview'].forEach(id => {
@@ -1012,14 +1194,31 @@ import Layout from '../layouts/Layout.astro';
   // Visitors tab
   document.getElementById('refreshVisitorsBtn').addEventListener('click', () => refreshVisitors(false));
   document.getElementById('chkHideBots').addEventListener('change', applyBotFilter);
+  
+  // Auto Refresh & Notifications
   document.getElementById('chkAutoRefresh').addEventListener('change', function() {
     if (this.checked) {
+      // Request notification permission if not already granted/denied
+      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+      }
+      
       if (autoRefreshTimer) clearInterval(autoRefreshTimer);
       autoRefreshTimer = setInterval(() => refreshVisitors(false), 7500);
     } else {
       clearInterval(autoRefreshTimer);
       autoRefreshTimer = null;
     }
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
   });
 
   // Initial cleanup if needed
