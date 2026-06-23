@@ -61,22 +61,26 @@ function parseCookies(cookieHeader) {
   return cookies;
 }
 
-export const POST = async ({ request, url, locals }) => {
-  const route = url.pathname.replace('/api/', '');
+export const ALL = async ({ request, url, locals }) => {
+  // Safely extract the route name regardless of trailing slashes
+  const route = url.pathname.replace(/\/$/, '').split('/').pop();
   
-  // Safely parse JSON body
+  // Safely parse JSON body only if it's a POST request
   let body = {};
-  try {
-    body = await request.json();
-  } catch (e) {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
+  if (request.method === 'POST') {
+    try {
+      body = await request.json();
+    } catch (e) {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
+    }
   }
 
   // --- SECURE LOGIN HANDLER ---
   if (route === 'login') {
     const { password } = body;
-    const runtimeEnv = locals.runtime?.env || process.env;
-    const SITE_PASSWORD = runtimeEnv?.SITE_PASSWORD || import.meta.env.SITE_PASSWORD || 'dev';
+    // Safely check environment variables to prevent Cloudflare crashes
+    const runtimeEnv = locals.runtime?.env || (typeof process !== 'undefined' ? process.env : {});
+    const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || import.meta.env.SITE_PASSWORD || 'dev';
     
     if (password === SITE_PASSWORD) {
       return new Response(JSON.stringify({ success: true }), {

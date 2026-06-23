@@ -3,7 +3,8 @@
 import Layout from '../layouts/Layout.astro';
 
 // Secure Server-Side Authentication for Cloudflare Pages
-const runtimeEnv = Astro.locals.runtime?.env || process.env;
+// Safely check environment variables to prevent Cloudflare crashes
+const runtimeEnv = Astro.locals.runtime?.env || (typeof process !== 'undefined' ? process.env : {});
 const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || import.meta.env.SITE_PASSWORD || 'dev';
 
 let isAuthenticated = false;
@@ -788,7 +789,8 @@ if (Astro.cookies.has('site_auth')) {
       <main class="login-main">
         <div class="login-box">
           <h1 style="color: var(--accent-color); text-align: center; margin-bottom: 1.5rem;">Access Restricted</h1>
-          <form id="loginForm" class="login-form">
+          <!-- Added onsubmit="event.preventDefault();" to absolutely prevent native form submission/page refresh -->
+          <form id="loginForm" class="login-form" onsubmit="event.preventDefault();">
             <input type="password" id="pwdInput" placeholder="Enter Password" required autofocus />
             <button type="submit" id="loginBtn">Login</button>
           </form>
