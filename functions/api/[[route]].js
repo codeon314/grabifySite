@@ -58,7 +58,9 @@ function parseCookies(cookieHeader) {
   return cookies;
 }
 
-export const POST = async ({ request, url, locals }) => {
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
   const route = url.pathname.replace(/\/$/, '').split('/').pop();
   
   let body = {};
@@ -71,8 +73,7 @@ export const POST = async ({ request, url, locals }) => {
   // --- SECURE LOGIN HANDLER ---
   if (route === 'login') {
     const { password } = body;
-    const runtimeEnv = locals.runtime?.env || (typeof process !== 'undefined' ? process.env : {});
-    const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || (import.meta.env ? import.meta.env.SITE_PASSWORD : null) || 'dev';
+    const SITE_PASSWORD = env.SITE_PASSWORD || 'dev';
     
     if (password === SITE_PASSWORD) {
       return new Response(JSON.stringify({ success: true }), {
@@ -123,10 +124,6 @@ export const POST = async ({ request, url, locals }) => {
 
         const htmlRes = await grabifyRequest(`/track/${code}/`, 'GET', null, `confirmation=${confirmation}`);
         const html = htmlRes.text;
-
-        if (url.searchParams.get('debug') === '1') {
-          return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
-        }
 
         const extract = (pattern) => {
           const match = html.match(new RegExp(pattern, 'i'));
@@ -234,11 +231,4 @@ export const POST = async ({ request, url, locals }) => {
   }
 
   return new Response(JSON.stringify(responseBody), init);
-};
-
-export const ALL = async ({ request, url }) => {
-  return new Response(JSON.stringify({ error: `Method ${request.method} not allowed on ${url.pathname}. Use POST.` }), {
-    status: 405,
-    headers: { 'Content-Type': 'application/json' }
-  });
-};
+}

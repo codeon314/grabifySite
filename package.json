@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev --host",
-    "build": "astro build && rm -rf .wrangler dist/server/wrangler.json dist/wrangler.json",
+    "build": "astro build",
     "preview": "astro preview --port 4321 --host",
     "astro": "astro"
   },
