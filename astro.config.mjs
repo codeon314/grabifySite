@@ -1,11 +1,5 @@
-// astro.config.mjs
 import { defineConfig } from 'astro/config';
-import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
-  output: 'server',
-  adapter: cloudflare({
-    mode: 'advanced',          // ← changed from 'directory'
-    imageService: 'passthrough'
-  })
+  output: 'static',   // default, but explicit
 });
