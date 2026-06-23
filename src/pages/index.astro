@@ -229,6 +229,17 @@ import Layout from '../layouts/Layout.astro';
       }, 3000);
     }
 
+    // ----- Button Text Feedback Helper -----
+    function setButtonCopied(btn, text) {
+      const originalText = btn.dataset.originalText || btn.textContent;
+      btn.dataset.originalText = originalText;
+      btn.textContent = text;
+      if (btn._copyTimeout) clearTimeout(btn._copyTimeout);
+      btn._copyTimeout = setTimeout(() => {
+        btn.textContent = originalText;
+      }, 3000);
+    }
+
     // ----- Native Notification Helper -----
     async function sendNotification(title, options) {
       if (!('Notification' in window) || Notification.permission !== 'granted') {
@@ -737,7 +748,7 @@ import Layout from '../layouts/Layout.astro';
           
           await sendNotification(`New Visitor: ${ip}`, {
             body: `Location: ${city}, ${country}\nTotal Clicks: ${clicks} | Unique: ${unique}`,
-            icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzAwRTVGRiIvPjwvc3ZnPg=='
+            icon: '/favicon.svg'
           });
         }
 
@@ -1064,7 +1075,7 @@ import Layout from '../layouts/Layout.astro';
 
           await sendNotification(`New Visitor: ${ip}`, {
             body: `Location: ${city}, ${country}\nClicks: ${clicks} / Unique: ${unique}`,
-            icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzAwRTVGRiIvPjwvc3ZnPg=='
+            icon: '/favicon.svg'
           });
         }
       } catch (e) {
@@ -1120,12 +1131,13 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('applyCustomBtn').addEventListener('click', applyCustom);
     document.getElementById('applyDestBtn').addEventListener('click', changeDestination);
 
-    document.getElementById('copyUrlBtn').addEventListener('click', async () => {
+    document.getElementById('copyUrlBtn').addEventListener('click', async (e) => {
       const url = document.getElementById('newUrl').value;
       if (!url) return;
       try {
         await navigator.clipboard.writeText(url);
         showToast('URL copied to clipboard!');
+        setButtonCopied(e.currentTarget, 'Copied');
       } catch (err) {
         showToast('Failed to copy URL.', true);
       }
@@ -1134,16 +1146,6 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('generateImageBtn').addEventListener('click', generateVisitorImage);
     document.getElementById('closeModalBtn').addEventListener('click', () => {
       document.getElementById('imageModal').classList.remove('active');
-    });
-    document.getElementById('copyImageBtn').addEventListener('click', async () => {
-      if (!generatedCanvasBlob) return;
-      try {
-        const item = new ClipboardItem({ 'image/png': generatedCanvasBlob });
-        await navigator.clipboard.write([item]);
-        showToast('Image copied to clipboard!');
-      } catch (err) {
-        showToast('Failed to copy image.', true);
-      }
     });
 
     ['chkSmartLogger','chkConsent','chkGPS','chkForwarding','chkPreview'].forEach(id => {
@@ -1172,10 +1174,16 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('imgCreateBtn').addEventListener('click', imgCreateLink);
     document.getElementById('imgLoadBtn').addEventListener('click', imgLoadExisting);
     document.getElementById('imgApplyCustomBtn').addEventListener('click', imgApplyCustom);
-    document.getElementById('imgCopyUrlBtn').addEventListener('click', async () => {
+    document.getElementById('imgCopyUrlBtn').addEventListener('click', async (e) => {
       const url = document.getElementById('imgNewUrl').value;
       if (!url) return;
-      try { await navigator.clipboard.writeText(url); showToast('URL copied!'); } catch { showToast('Copy failed', true); }
+      try { 
+        await navigator.clipboard.writeText(url); 
+        showToast('URL copied!'); 
+        setButtonCopied(e.currentTarget, 'Copied');
+      } catch { 
+        showToast('Copy failed', true); 
+      }
     });
     document.getElementById('imgRefreshVisitorsBtn').addEventListener('click', () => imgRefreshVisitors(false));
     document.getElementById('imgChkHideBots').addEventListener('change', imgApplyBotFilter);
@@ -1195,29 +1203,33 @@ import Layout from '../layouts/Layout.astro';
 
     // Copy embed buttons
     document.querySelectorAll('.copy-embed-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
+      btn.addEventListener('click', (e) => {
+        const targetBtn = e.currentTarget;
+        const targetId = targetBtn.dataset.target;
         const el = document.getElementById(targetId);
         if (!el) return;
         const text = el.innerText || el.textContent;
-        navigator.clipboard.writeText(text).then(() => showToast('Embed code copied!')).catch(() => showToast('Copy failed', true));
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('Embed code copied!');
+          const isHtml = targetId.toLowerCase().includes('html');
+          setButtonCopied(targetBtn, isHtml ? 'Copied HTML' : 'Copied BBCode');
+        }).catch(() => showToast('Copy failed', true));
       });
     });
 
-    // Re‑attach copyImageBtn for image tab (already done above, but ensure both blobs are handled)
-    // The existing copyImageBtn listener uses generatedCanvasBlob; we'll also handle imageGeneratedCanvasBlob.
-    document.getElementById('copyImageBtn').addEventListener('click', async () => {
-      // Determine which blob to use based on which modal is open – simplest: if imageSelectedRowData is set, it's image tab.
+    // Single listener for the Copy Image button
+    document.getElementById('copyImageBtn').addEventListener('click', async (e) => {
       const blob = imageSelectedRowData ? imageGeneratedCanvasBlob : generatedCanvasBlob;
       if (!blob) return;
       try {
         const item = new ClipboardItem({ 'image/png': blob });
         await navigator.clipboard.write([item]);
         showToast('Image copied!');
+        setButtonCopied(e.currentTarget, 'Copied Image');
       } catch { showToast('Copy failed', true); }
     });
 
-    // Tab switching (already present, but we add image tab button handler automatically)
+    // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1414,7 +1426,9 @@ import Layout from '../layouts/Layout.astro';
     border-radius: 4px;
     color: #00E5FF;
     flex: 1;
-    word-break: break-all;
+    min-width: 0;
+    white-space: nowrap;
+    overflow-x: auto;
     font-size: 0.9rem;
     border: 1px solid #2A2A2A;
   }
@@ -1767,13 +1781,23 @@ import Layout from '../layouts/Layout.astro';
 
   /* Mobile Responsiveness */
   @media (max-width: 768px) {
+    /* Keep standard input groups inline */
     .input-group { 
-      flex-direction: column; 
+      flex-direction: row; 
       align-items: stretch; 
     }
-    .input-group button, .custom-select-wrapper { 
-      width: 100%; 
+    .input-group button { 
+      width: auto; 
     }
+    
+    /* Only stack the custom link group because it has 4 elements */
+    .custom-group .input-group {
+      flex-direction: column;
+    }
+    .custom-group .input-group > * {
+      width: 100%;
+    }
+
     .info-row { 
       flex-direction: column; 
       align-items: flex-start; 
@@ -1782,6 +1806,22 @@ import Layout from '../layouts/Layout.astro';
     .info-row label { 
       width: auto; 
     }
+    
+    /* Stack embed rows and make code scrollable */
+    .embed-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .embed-row code {
+      width: 100%;
+      box-sizing: border-box;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .embed-row button {
+      width: 100%;
+    }
+
     .visitors-toolbar { 
       flex-direction: column; 
       align-items: stretch; 
