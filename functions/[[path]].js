@@ -1,6 +1,6 @@
 // functions/[[path]].js
-import { handleRequest } from '../dist/server/entry.mjs';
+import serverHandler from '../dist/server/entry.mjs';
 
-export async function onRequest(context) {
-  return handleRequest(context);
-}
+export const onRequest = (context) => {
+  return serverHandler(context.request, context.env, context);
+};
