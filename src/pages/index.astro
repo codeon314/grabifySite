@@ -1,132 +1,904 @@
 ---
 // src/pages/index.astro
 import Layout from '../layouts/Layout.astro';
+
+// Secure Server-Side Authentication
+const SITE_PASSWORD = import.meta.env.SITE_PASSWORD || process.env.SITE_PASSWORD || 'dev';
+let isAuthenticated = false;
+let loginError = '';
+
+// Check if the user already has a valid auth cookie
+if (Astro.cookies.has('site_auth')) {
+  if (Astro.cookies.get('site_auth').value === SITE_PASSWORD) {
+    isAuthenticated = true;
+  }
+}
+
+// Handle Login Form Submission
+if (Astro.request.method === 'POST' && !isAuthenticated) {
+  const data = await Astro.request.formData();
+  const submittedPassword = data.get('password');
+  
+  if (submittedPassword === SITE_PASSWORD) {
+    // Set secure cookie valid for 7 days
+    Astro.cookies.set('site_auth', SITE_PASSWORD, { 
+      path: '/', 
+      httpOnly: true, 
+      secure: true, 
+      sameSite: 'strict', 
+      maxAge: 60 * 60 * 24 * 7 
+    });
+    isAuthenticated = true;
+  } else {
+    loginError = 'Invalid password';
+  }
+}
 ---
 
 <Layout title="Grabify Manager | Mastercodeon">
-  <main>
-    <h1 style="text-align: center; color: var(--accent-color); margin-bottom: 2rem;">Grabify Link Manager</h1>
+  {!isAuthenticated ? (
+    <main class="login-main">
+      <div class="login-box">
+        <h1 style="color: var(--accent-color); text-align: center; margin-bottom: 1.5rem;">Access Restricted</h1>
+        {loginError && <div class="error-msg">{loginError}</div>}
+        <form method="POST" class="login-form">
+          <input type="password" name="password" placeholder="Enter Password" required autofocus />
+          <button type="submit">Login</button>
+        </form>
+      </div>
+    </main>
+  ) : (
+    <main>
+      <h1 style="text-align: center; color: var(--accent-color); margin-bottom: 2rem;">Grabify Link Manager</h1>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="manager">Link Manager</button>
-      <button class="tab-btn" data-tab="visitors">Visitors</button>
-    </div>
-
-    <!-- LINK MANAGER TAB -->
-    <div id="tab-manager" class="tab-panel active">
-      <div class="input-group-container">
-        <div class="input-group">
-          <input type="text" id="urlInput" placeholder="Enter target URL (with https://)" />
-          <button id="createBtn">Create Grabify Link</button>
-        </div>
-        <input type="text" id="resultLink" readonly placeholder="Created link will appear here..." />
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="manager">Link Manager</button>
+        <button class="tab-btn" data-tab="visitors">Visitors</button>
       </div>
 
-      <div class="load-section">
-        <label for="loadInput">Load existing (code or URL):</label>
-        <div class="input-group">
-          <input type="text" id="loadInput" placeholder="Tracking code or full tracking URL" />
-          <button id="loadBtn">Load</button>
+      <!-- LINK MANAGER TAB -->
+      <div id="tab-manager" class="tab-panel active">
+        <div class="input-group-container">
+          <div class="input-group">
+            <input type="text" id="urlInput" placeholder="Enter target URL (with https://)" />
+            <button id="createBtn">Create Grabify Link</button>
+          </div>
+          <input type="text" id="resultLink" readonly placeholder="Created link will appear here..." />
         </div>
-      </div>
 
-      <div class="info-group">
-        <h3>Link Information</h3>
-        <div class="info-row">
-          <label>Original URL:</label>
-          <input type="text" id="originalUrl" readonly />
-        </div>
-        <div class="info-row">
-          <label>New URL:</label>
-          <div class="input-group" style="flex: 1;">
-            <input type="text" id="newUrl" readonly />
-            <button id="copyUrlBtn" title="Copy to clipboard">Copy</button>
+        <div class="load-section">
+          <label for="loadInput">Load existing (code or URL):</label>
+          <div class="input-group">
+            <input type="text" id="loadInput" placeholder="Tracking code or full tracking URL" />
+            <button id="loadBtn">Load</button>
           </div>
         </div>
-        <div class="info-row">
-          <label>Tracking Code:</label>
-          <input type="text" id="trackingCode" readonly />
+
+        <div class="info-group">
+          <h3>Link Information</h3>
+          <div class="info-row">
+            <label>Original URL:</label>
+            <input type="text" id="originalUrl" readonly />
+          </div>
+          <div class="info-row">
+            <label>New URL:</label>
+            <div class="input-group" style="flex: 1;">
+              <input type="text" id="newUrl" readonly />
+              <button id="copyUrlBtn" title="Copy to clipboard">Copy</button>
+            </div>
+          </div>
+          <div class="info-row">
+            <label>Tracking Code:</label>
+            <input type="text" id="trackingCode" readonly />
+          </div>
+          <div class="info-row">
+            <label>Access Link:</label>
+            <input type="text" id="accessLink" readonly />
+          </div>
         </div>
-        <div class="info-row">
-          <label>Access Link:</label>
-          <input type="text" id="accessLink" readonly />
+
+        <div class="settings-group">
+          <h3>Settings</h3>
+          <div class="checkbox-grid">
+            <label><input type="checkbox" id="chkSmartLogger" /> Smart Logger</label>
+            <label><input type="checkbox" id="chkConsent" /> Consent</label>
+            <label><input type="checkbox" id="chkGPS" /> Collect GPS</label>
+            <label><input type="checkbox" id="chkForwarding" /> Forward GET params</label>
+            <label><input type="checkbox" id="chkPreview" /> Preview (NEW)</label>
+          </div>
+        </div>
+
+        <div class="custom-group">
+          <h3>Customize Link</h3>
+          <div class="input-group">
+            <select id="cmbDomain">
+              <option value="onbit.pro">onbit.pro</option>
+              <option value="snifferip.com">snifferip.com</option>
+              <option value="unl.one">unl.one</option>
+              <option value="urlto.me">urlto.me</option>
+            </select>
+            <input type="text" id="txtPath" placeholder="Custom path (optional)" />
+            <select id="cmbExtension"></select>
+            <button id="applyCustomBtn">Apply</button>
+          </div>
+        </div>
+
+        <div class="destination-group">
+          <h3>Edit Original URL</h3>
+          <div class="input-group">
+            <input type="text" id="newDestination" placeholder="New destination URL" />
+            <button id="applyDestBtn">Change URL</button>
+          </div>
         </div>
       </div>
 
-      <div class="settings-group">
-        <h3>Settings</h3>
-        <div class="checkbox-grid">
-          <label><input type="checkbox" id="chkSmartLogger" /> Smart Logger</label>
-          <label><input type="checkbox" id="chkConsent" /> Consent</label>
-          <label><input type="checkbox" id="chkGPS" /> Collect GPS</label>
-          <label><input type="checkbox" id="chkForwarding" /> Forward GET params</label>
-          <label><input type="checkbox" id="chkPreview" /> Preview (NEW)</label>
+      <!-- VISITORS TAB -->
+      <div id="tab-visitors" class="tab-panel">
+        <div class="visitors-toolbar">
+          <span id="clicksInfo">Clicks/Unique: 0/0</span>
+          <button id="refreshVisitorsBtn">Refresh Visitors</button>
+          <button id="generateImageBtn" disabled>Generate Image</button>
+          <div class="toolbar-toggles">
+            <label><input type="checkbox" id="chkHideBots" /> Hide Bots</label>
+            <label><input type="checkbox" id="chkAutoRefresh" /> Auto Refresh</label>
+          </div>
+        </div>
+        <div class="visitors-table-container">
+          <table id="visitorsTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
+    </main>
 
-      <div class="custom-group">
-        <h3>Customize Link</h3>
-        <div class="input-group">
-          <select id="cmbDomain">
-            <option value="onbit.pro">onbit.pro</option>
-            <option value="snifferip.com">snifferip.com</option>
-            <option value="unl.one">unl.one</option>
-            <option value="urlto.me">urlto.me</option>
-          </select>
-          <input type="text" id="txtPath" placeholder="Custom path (optional)" />
-          <select id="cmbExtension"></select>
-          <button id="applyCustomBtn">Apply</button>
+    <!-- IMAGE PREVIEW MODAL -->
+    <div id="imageModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>Visitor Details Image</h3>
+        <div class="modal-image-container">
+          <img id="previewImage" src="" alt="Generated Visitor Data" />
         </div>
-      </div>
-
-      <div class="destination-group">
-        <h3>Edit Original URL</h3>
-        <div class="input-group">
-          <input type="text" id="newDestination" placeholder="New destination URL" />
-          <button id="applyDestBtn">Change URL</button>
+        <div class="modal-actions">
+          <button id="copyImageBtn">Copy Image</button>
+          <button id="closeModalBtn" style="background-color: #333; color: #FFF;">Close</button>
         </div>
       </div>
     </div>
 
-    <!-- VISITORS TAB -->
-    <div id="tab-visitors" class="tab-panel">
-      <div class="visitors-toolbar">
-        <span id="clicksInfo">Clicks/Unique: 0/0</span>
-        <button id="refreshVisitorsBtn">Refresh Visitors</button>
-        <button id="generateImageBtn" disabled>Generate Image</button>
-        <div class="toolbar-toggles">
-          <label><input type="checkbox" id="chkHideBots" /> Hide Bots</label>
-          <label><input type="checkbox" id="chkAutoRefresh" /> Auto Refresh</label>
-        </div>
-      </div>
-      <div class="visitors-table-container">
-        <table id="visitorsTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </main>
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
 
-  <!-- IMAGE PREVIEW MODAL -->
-  <div id="imageModal" class="modal-overlay">
-    <div class="modal-content">
-      <h3>Visitor Details Image</h3>
-      <div class="modal-image-container">
-        <img id="previewImage" src="" alt="Generated Visitor Data" />
-      </div>
-      <div class="modal-actions">
-        <button id="copyImageBtn">Copy Image</button>
-        <button id="closeModalBtn" style="background-color: #333; color: #FFF;">Close</button>
-      </div>
-    </div>
-  </div>
+    <!-- 
+      Using is:inline ensures this script is ONLY sent to the client 
+      if they are authenticated. It will not exist in the source code otherwise.
+    -->
+    <script is:inline>
+      // ----- Custom Toast Alerts -----
+      function showToast(message, isError = false) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        
+        const toast = document.createElement('div');
+        toast.className = `toast ${isError ? 'error' : ''}`;
+        toast.textContent = message;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.classList.add('fade-out');
+          toast.addEventListener('animationend', () => toast.remove());
+        }, 3000);
+      }
+
+      // ----- Extensions list (must match C# app) -----
+      const extensions = [
+        "", ".gif", ".jpg", ".jpeg", ".png", ".lnk", ".link", ".txt", ".html", ".js",
+        ".exe", ".ext", ".pdf", ".psd", ".csv", ".mp3", ".mp4", ".wma", ".avi", ".apk",
+        ".jar", ".ico", ".json", ".iso", ".zip", ".rar", ".tgz", ".tar", ".gz",
+        ".torrent", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"
+      ];
+
+      // Populate extension dropdown
+      const cmbExt = document.getElementById('cmbExtension');
+      extensions.forEach(ext => {
+        const opt = document.createElement('option');
+        opt.value = ext;
+        opt.textContent = ext || '(none)';
+        cmbExt.appendChild(opt);
+      });
+
+      // ----- Custom Select Initialization -----
+      function initCustomSelect(selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        
+        select.style.display = 'none';
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'custom-select-wrapper';
+        
+        const trigger = document.createElement('div');
+        trigger.className = 'custom-select-trigger';
+        
+        const textContainer = document.createElement('div');
+        textContainer.style.overflow = 'hidden';
+        textContainer.style.position = 'relative';
+        textContainer.style.flex = '1';
+        textContainer.style.display = 'flex';
+        textContainer.style.alignItems = 'center';
+        
+        const triggerText = document.createElement('span');
+        triggerText.textContent = select.options[select.selectedIndex]?.text || '';
+        textContainer.appendChild(triggerText);
+        
+        const arrow = document.createElement('div');
+        arrow.className = 'custom-select-arrow';
+        arrow.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="#9CA3AF" d="M6 8L1 3h10z"/></svg>`;
+        
+        trigger.appendChild(textContainer);
+        trigger.appendChild(arrow);
+        wrapper.appendChild(trigger);
+        
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'custom-select-options';
+        
+        Array.from(select.options).forEach(opt => {
+          const optionDiv = document.createElement('div');
+          optionDiv.className = 'custom-option';
+          optionDiv.textContent = opt.text;
+          optionDiv.dataset.value = opt.value;
+          
+          optionDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (select.value !== opt.value) {
+              triggerText.style.transform = 'translateY(-150%)';
+              triggerText.style.opacity = '0';
+              
+              setTimeout(() => {
+                triggerText.textContent = opt.text;
+                triggerText.style.transition = 'none';
+                triggerText.style.transform = 'translateY(150%)';
+                void triggerText.offsetWidth;
+                
+                triggerText.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
+                triggerText.style.transform = 'translateY(0)';
+                triggerText.style.opacity = '1';
+                
+                select.value = opt.value;
+                select.dispatchEvent(new Event('change'));
+              }, 150);
+            }
+            wrapper.classList.remove('open');
+            trigger.classList.remove('open');
+          });
+          optionsContainer.appendChild(optionDiv);
+        });
+        
+        wrapper.appendChild(optionsContainer);
+        select.parentNode.insertBefore(wrapper, select.nextSibling);
+        
+        trigger.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = wrapper.classList.contains('open');
+          document.querySelectorAll('.custom-select-wrapper').forEach(w => {
+            w.classList.remove('open');
+            w.querySelector('.custom-select-trigger').classList.remove('open');
+          });
+          if (!isOpen) {
+            wrapper.classList.add('open');
+            trigger.classList.add('open');
+          }
+        });
+        
+        select._customSelectWrapper = wrapper;
+      }
+
+      initCustomSelect('cmbDomain');
+      initCustomSelect('cmbExtension');
+
+      document.addEventListener('click', () => {
+        document.querySelectorAll('.custom-select-wrapper').forEach(w => {
+          w.classList.remove('open');
+          w.querySelector('.custom-select-trigger').classList.remove('open');
+        });
+      });
+
+      function updateCustomSelectUI(select) {
+        if (select && select._customSelectWrapper) {
+          const triggerText = select._customSelectWrapper.querySelector('.custom-select-trigger span');
+          const selectedOpt = select.options[select.selectedIndex];
+          if (selectedOpt && triggerText.textContent !== selectedOpt.text) {
+            triggerText.textContent = selectedOpt.text;
+          }
+        }
+      }
+
+      // ----- State -----
+      let currentCode = null;
+      let loadedIndices = new Set();
+      let allSmartData = [];
+      let autoRefreshTimer = null;
+      let selectedRowData = null;
+      let generatedCanvasBlob = null;
+
+      // ----- Helper: extract code from URL -----
+      function extractCodeFromUrl(url) {
+        const match = url.match(/\/track\/([A-Za-z0-9]+)/);
+        return match ? match[1] : null;
+      }
+
+      // ----- Local storage for extension per code -----
+      function getSavedExtension(code) {
+        try {
+          const data = JSON.parse(localStorage.getItem('grabify_extensions') || '{}');
+          return data[code] || null;
+        } catch { return null; }
+      }
+      function saveExtension(code, ext) {
+        try {
+          const data = JSON.parse(localStorage.getItem('grabify_extensions') || '{}');
+          if (ext) data[code] = ext; else delete data[code];
+          localStorage.setItem('grabify_extensions', JSON.stringify(data));
+        } catch {}
+      }
+
+      // ----- API calls -----
+      async function apiCall(endpoint, body) {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Request failed');
+        return json;
+      }
+
+      // ----- Link Manager functions -----
+      async function createLink() {
+        const url = document.getElementById('urlInput').value.trim();
+        if (!url) return showToast('Enter a valid URL.', true);
+        try { new URL(url); } catch { return showToast('Invalid URL (include http:// or https://)', true); }
+
+        const btn = document.getElementById('createBtn');
+        btn.disabled = true;
+        btn.textContent = 'Creating...';
+        try {
+          const data = await apiCall('/api/create', { url });
+          document.getElementById('resultLink').value = data.go;
+          currentCode = data.code;
+          if (currentCode) await refreshLinkInfo(currentCode);
+          showToast('Link created successfully!');
+        } catch (e) {
+          showToast('Error: ' + e.message, true);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Create Grabify Link';
+        }
+      }
+
+      async function loadExisting() {
+        const input = document.getElementById('loadInput').value.trim();
+        if (!input) return showToast('Enter code or URL.', true);
+        const code = extractCodeFromUrl(input) || input;
+        currentCode = code;
+        const btn = document.getElementById('loadBtn');
+        btn.disabled = true;
+        btn.textContent = 'Loading...';
+        try {
+          const data = await apiCall('/api/load', { code });
+          document.getElementById('originalUrl').value = data.originalUrl;
+          document.getElementById('newUrl').value = data.shortLink;
+          document.getElementById('trackingCode').value = data.trackingCode;
+          document.getElementById('accessLink').value = data.accessLink;
+          document.getElementById('chkSmartLogger').checked = data.smart;
+          document.getElementById('chkConsent').checked = data.privacy;
+          document.getElementById('chkGPS').checked = data.gps;
+          document.getElementById('chkForwarding').checked = data.forwarding;
+          document.getElementById('chkPreview').checked = data.preview;
+
+          try {
+            const uri = new URL(data.shortLink);
+            const host = uri.host;
+            let path = uri.pathname.replace(/^\//, '');
+            let fileExt = '';
+            const dotIdx = path.lastIndexOf('.');
+            if (dotIdx > 0 && path.indexOf('/') === -1) {
+              fileExt = path.substring(dotIdx);
+              path = path.substring(0, dotIdx);
+            }
+            const savedExt = getSavedExtension(code);
+            const finalExt = savedExt || fileExt;
+            
+            const cmbDomain = document.getElementById('cmbDomain');
+            cmbDomain.value = host;
+            updateCustomSelectUI(cmbDomain);
+            
+            document.getElementById('txtPath').value = path;
+            
+            const cmbExtEl = document.getElementById('cmbExtension');
+            cmbExtEl.value = extensions.includes(finalExt) ? finalExt : '';
+            updateCustomSelectUI(cmbExtEl);
+          } catch {}
+
+          document.getElementById('resultLink').value = data.shortLink;
+          await refreshVisitors(true);
+          showToast('Link loaded successfully!');
+        } catch (e) {
+          showToast('Error: ' + e.message, true);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Load';
+        }
+      }
+
+      async function refreshLinkInfo(code) {
+        if (!code) return;
+        try {
+          const data = await apiCall('/api/load', { code });
+          document.getElementById('originalUrl').value = data.originalUrl;
+          document.getElementById('newUrl').value = data.shortLink;
+          document.getElementById('trackingCode').value = data.trackingCode;
+          document.getElementById('accessLink').value = data.accessLink;
+          document.getElementById('chkSmartLogger').checked = data.smart;
+          document.getElementById('chkConsent').checked = data.privacy;
+          document.getElementById('chkGPS').checked = data.gps;
+          document.getElementById('chkForwarding').checked = data.forwarding;
+          document.getElementById('chkPreview').checked = data.preview;
+
+          try {
+            const uri = new URL(data.shortLink);
+            const host = uri.host;
+            let path = uri.pathname.replace(/^\//, '');
+            let ext = '';
+            const dotIdx = path.lastIndexOf('.');
+            if (dotIdx > 0 && path.indexOf('/') === -1) {
+              ext = path.substring(dotIdx);
+              path = path.substring(0, dotIdx);
+            }
+            const saved = getSavedExtension(code);
+            const finalExt = saved || ext;
+            
+            const cmbDomain = document.getElementById('cmbDomain');
+            cmbDomain.value = host;
+            updateCustomSelectUI(cmbDomain);
+            
+            document.getElementById('txtPath').value = path;
+            
+            const cmbExtEl = document.getElementById('cmbExtension');
+            cmbExtEl.value = extensions.includes(finalExt) ? finalExt : '';
+            updateCustomSelectUI(cmbExtEl);
+          } catch {}
+        } catch (e) {
+          console.error('refreshLinkInfo failed:', e);
+        }
+      }
+
+      async function applySettings() {
+        if (!currentCode) return;
+        const settings = {
+          code: currentCode,
+          smart: document.getElementById('chkSmartLogger').checked ? 'on' : '',
+          privacy: document.getElementById('chkConsent').checked ? 'on' : '',
+          gps: document.getElementById('chkGPS').checked ? 'on' : '',
+          forwarding: document.getElementById('chkForwarding').checked ? 'on' : '',
+          preview: document.getElementById('chkPreview').checked ? 'on' : ''
+        };
+        try {
+          await apiCall('/api/settings', settings);
+          showToast('Settings saved.');
+        } catch (e) {
+          showToast('Settings update failed: ' + e.message, true);
+        }
+      }
+
+      async function applyCustom() {
+        if (!currentCode) return showToast('Create or load a link first.', true);
+        const domain = document.getElementById('cmbDomain').value;
+        const path = document.getElementById('txtPath').value.trim();
+        const extension = document.getElementById('cmbExtension').value;
+        try {
+          const data = await apiCall('/api/custom', { code: currentCode, domain, path, extension });
+          document.getElementById('newUrl').value = data.shortlink;
+          document.getElementById('resultLink').value = data.shortlink;
+          saveExtension(currentCode, extension);
+          showToast('Custom link applied.');
+        } catch (e) {
+          showToast('Error: ' + e.message, true);
+        }
+      }
+
+      async function changeDestination() {
+        if (!currentCode) return showToast('Create or load a link first.', true);
+        const newDest = document.getElementById('newDestination').value.trim();
+        if (!newDest) return showToast('Enter a valid destination URL.', true);
+        try { new URL(newDest); } catch { return showToast('Invalid URL.', true); }
+        try {
+          await apiCall('/api/destination', { code: currentCode, destination: newDest });
+          showToast('Destination updated.');
+          await refreshLinkInfo(currentCode);
+        } catch (e) {
+          showToast('Error: ' + e.message, true);
+        }
+      }
+
+      // ----- Visitors Tab functions -----
+      async function fetchAllVisitors(code, showHideBots = '0') {
+        let page = 1;
+        let allIndices = [];
+        let totalClicks = 0, uniqueClicks = 0;
+        while (true) {
+          const data = await apiCall('/api/visitors', { code, page, showHideBots });
+          totalClicks = data.clicks;
+          uniqueClicks = data.unique;
+          if (data.content && data.content.length > 0) {
+            allIndices.push(...data.content);
+          }
+          if (data.next === 0) break;
+          page = data.next;
+        }
+        return { clicks: totalClicks, unique: uniqueClicks, indices: allIndices };
+      }
+
+      async function getSmartData(code, id) {
+        const data = await apiCall('/api/smart', { code, id });
+        return data.smart;
+      }
+
+      function flattenObject(obj, prefix = '') {
+        const result = {};
+        for (const key in obj) {
+          const value = obj[key];
+          const newKey = prefix ? `${prefix}.${key}` : key;
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            Object.assign(result, flattenObject(value, newKey));
+          } else if (Array.isArray(value)) {
+            result[newKey] = value.join(', ');
+          } else {
+            result[newKey] = value;
+          }
+        }
+        return result;
+      }
+
+      function buildTableColumns(newData) {
+        const allKeys = new Set();
+        newData.forEach(dict => Object.keys(dict).forEach(k => allKeys.add(k)));
+        const ordered = ['date', 'ip', 'isp', 'country', 'city', 'state', 'browser', 'platform', 'bot', 'useragent', 'latitude', 'longitude', 'accuracy', 'accuracy-radius', 'fingerprint'];
+        const columns = [];
+        ordered.forEach(key => {
+          if (allKeys.has(key)) { columns.push(key); allKeys.delete(key); }
+        });
+        allKeys.forEach(key => columns.push(key));
+        return columns;
+      }
+
+      function renderTable() {
+        const thead = document.querySelector('#visitorsTable thead');
+        const tbody = document.querySelector('#visitorsTable tbody');
+        if (allSmartData.length === 0) {
+          thead.innerHTML = '';
+          tbody.innerHTML = '';
+          return;
+        }
+        const columns = buildTableColumns(allSmartData);
+        thead.innerHTML = '<tr>' + columns.map(col => `<th>${col}</th>`).join('') + '</tr>';
+
+        tbody.innerHTML = '';
+        allSmartData.forEach((rowData, idx) => {
+          const tr = document.createElement('tr');
+          const isBot = String(rowData.bot) === '1' || String(rowData.bot) === 'True';
+          tr.classList.toggle('bot-row', isBot);
+          
+          // Row selection logic
+          tr.addEventListener('click', () => {
+            document.querySelectorAll('#visitorsTable tbody tr').forEach(r => r.classList.remove('selected'));
+            tr.classList.add('selected');
+            selectedRowData = rowData;
+            document.getElementById('generateImageBtn').disabled = false;
+          });
+
+          columns.forEach(col => {
+            const td = document.createElement('td');
+            const cellValue = rowData[col] !== undefined ? rowData[col] : '';
+            td.textContent = cellValue;
+            if (cellValue) td.title = cellValue;
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        applyBotFilter();
+      }
+
+      function applyBotFilter() {
+        const hide = document.getElementById('chkHideBots').checked;
+        document.querySelectorAll('#visitorsTable tbody tr').forEach(row => {
+          if (row.classList.contains('bot-row')) {
+            row.style.display = hide ? 'none' : '';
+          } else {
+            row.style.display = '';
+          }
+        });
+      }
+
+      async function refreshVisitors(full = false) {
+        if (!currentCode) return;
+        const btn = document.getElementById('refreshVisitorsBtn');
+        btn.disabled = true;
+        btn.textContent = 'Refreshing...';
+        try {
+          if (full) {
+            loadedIndices.clear();
+            allSmartData = [];
+            selectedRowData = null;
+            document.getElementById('generateImageBtn').disabled = true;
+          }
+          const { clicks, unique, indices } = await fetchAllVisitors(currentCode);
+          document.getElementById('clicksInfo').textContent = `Clicks/Unique: ${clicks}/${unique}`;
+
+          const newIndices = indices.filter(i => !loadedIndices.has(i));
+          if (newIndices.length === 0) return;
+
+          const newData = [];
+          for (const idx of newIndices) {
+            const smart = await getSmartData(currentCode, idx);
+            if (smart) {
+              const flat = flattenObject(smart);
+              newData.push(flat);
+              loadedIndices.add(idx);
+            }
+          }
+          allSmartData.push(...newData);
+          renderTable();
+
+          // Push Notification Logic (only if not initial full load)
+          if (!full && newData.length > 0 && Notification.permission === 'granted') {
+            const latest = newData[newData.length - 1];
+            const ip = latest.ip || 'Unknown IP';
+            const city = latest.city || 'Unknown City';
+            const country = latest.country || 'Unknown Country';
+            
+            new Notification(`New Visitor: ${ip}`, {
+              body: `Location: ${city}, ${country}\nTotal Clicks: ${clicks} | Unique: ${unique}`,
+              icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzAwRTVGRiIvPjwvc3ZnPg=='
+            });
+          }
+
+        } catch (e) {
+          showToast('Visitor refresh failed: ' + e.message, true);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Refresh Visitors';
+        }
+      }
+
+      // ----- Image Generation Logic -----
+      function generateVisitorImage() {
+        if (!selectedRowData) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 450;
+        canvas.height = 520;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = '#0A0A0A';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Header
+        ctx.fillStyle = '#00E5FF';
+        ctx.font = 'bold 22px system-ui, sans-serif';
+        ctx.fillText('Visitor Details', 25, 45);
+
+        // Separator line
+        ctx.strokeStyle = '#2A2A2A';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(25, 65);
+        ctx.lineTo(425, 65);
+        ctx.stroke();
+
+        // Fields to render
+        const fields = ['date', 'ip', 'isp', 'country', 'city', 'state', 'browser', 'platform', 'latitude', 'longitude', 'accuracy', 'accuracy-radius'];
+        let y = 105;
+
+        fields.forEach(field => {
+          // Label
+          ctx.fillStyle = '#9CA3AF';
+          ctx.font = '600 14px system-ui, sans-serif';
+          ctx.fillText(field.toUpperCase() + ':', 25, y);
+
+          // Value
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '14px system-ui, sans-serif';
+          const val = selectedRowData[field] || 'N/A';
+          
+          // Truncate if too long
+          let displayVal = String(val);
+          if (ctx.measureText(displayVal).width > 250) {
+            while (ctx.measureText(displayVal + '...').width > 250 && displayVal.length > 0) {
+              displayVal = displayVal.slice(0, -1);
+            }
+            displayVal += '...';
+          }
+          
+          ctx.fillText(displayVal, 160, y);
+          y += 34;
+        });
+
+        // Set to preview
+        const dataUrl = canvas.toDataURL('image/png');
+        document.getElementById('previewImage').src = dataUrl;
+        
+        // Store blob for copying
+        canvas.toBlob(blob => {
+          generatedCanvasBlob = blob;
+        }, 'image/png');
+
+        // Show Modal
+        document.getElementById('imageModal').classList.add('active');
+      }
+
+      // ----- Event listeners -----
+      document.getElementById('createBtn').addEventListener('click', createLink);
+      document.getElementById('loadBtn').addEventListener('click', loadExisting);
+      document.getElementById('applyCustomBtn').addEventListener('click', applyCustom);
+      document.getElementById('applyDestBtn').addEventListener('click', changeDestination);
+
+      // Copy URL Button
+      document.getElementById('copyUrlBtn').addEventListener('click', async () => {
+        const url = document.getElementById('newUrl').value;
+        if (!url) return;
+        try {
+          await navigator.clipboard.writeText(url);
+          showToast('URL copied to clipboard!');
+        } catch (err) {
+          showToast('Failed to copy URL.', true);
+        }
+      });
+
+      // Image Generation & Modal
+      document.getElementById('generateImageBtn').addEventListener('click', generateVisitorImage);
+      document.getElementById('closeModalBtn').addEventListener('click', () => {
+        document.getElementById('imageModal').classList.remove('active');
+      });
+      document.getElementById('copyImageBtn').addEventListener('click', async () => {
+        if (!generatedCanvasBlob) return;
+        try {
+          const item = new ClipboardItem({ 'image/png': generatedCanvasBlob });
+          await navigator.clipboard.write([item]);
+          showToast('Image copied to clipboard!');
+        } catch (err) {
+          showToast('Failed to copy image. Your browser might not support copying images directly.', true);
+        }
+      });
+
+      // Settings checkboxes auto-save on change
+      ['chkSmartLogger','chkConsent','chkGPS','chkForwarding','chkPreview'].forEach(id => {
+        document.getElementById(id).addEventListener('change', applySettings);
+      });
+
+      // Visitors tab
+      document.getElementById('refreshVisitorsBtn').addEventListener('click', () => refreshVisitors(false));
+      document.getElementById('chkHideBots').addEventListener('change', applyBotFilter);
+      
+      // Auto Refresh & Notifications
+      document.getElementById('chkAutoRefresh').addEventListener('change', function() {
+        if (this.checked) {
+          if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+          }
+          
+          if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+          autoRefreshTimer = setInterval(() => refreshVisitors(false), 7500);
+          showToast('Auto-refresh enabled.');
+        } else {
+          clearInterval(autoRefreshTimer);
+          autoRefreshTimer = null;
+          showToast('Auto-refresh disabled.');
+        }
+      });
+
+      // Tab switching
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        });
+      });
+
+      // Initial cleanup if needed
+      window.addEventListener('beforeunload', () => clearInterval(autoRefreshTimer));
+    </script>
+  )}
 </Layout>
 
 <style is:global>
   main {
     max-width: 900px;
     margin: auto;
+  }
+
+  /* Login Screen Styles */
+  .login-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+  }
+  .login-box {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 2.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 30px rgba(0, 229, 255, 0.1);
+    width: 100%;
+    max-width: 400px;
+  }
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .login-form input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+  }
+  .login-form button {
+    padding: 0.8rem;
+    font-size: 1rem;
+  }
+  .error-msg {
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+    padding: 0.8rem;
+    border-radius: 6px;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255, 68, 68, 0.3);
+  }
+
+  /* Toast Notifications */
+  #toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+  .toast {
+    background: #111;
+    border-left: 4px solid var(--accent-color);
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+    transform: translateX(100%);
+    font-size: 0.95rem;
+    font-weight: 500;
+    pointer-events: auto;
+  }
+  .toast.error {
+    border-left-color: #ff4444;
+  }
+  @keyframes slideIn {
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .toast.fade-out {
+    animation: fadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  @keyframes fadeOut {
+    to { opacity: 0; transform: translateX(100%); }
   }
 
   /* Tabs */
@@ -239,7 +1011,7 @@ import Layout from '../layouts/Layout.astro';
   }
 
   /* Base input/button */
-  input[type="text"], button {
+  input[type="text"], input[type="password"], button {
     background-color: #111;
     border: 1px solid var(--border-color);
     color: var(--text-color);
@@ -249,10 +1021,10 @@ import Layout from '../layouts/Layout.astro';
     font-size: 0.95rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  input[type="text"]:hover {
+  input[type="text"]:hover, input[type="password"]:hover {
     border-color: #4B5563;
   }
-  input[type="text"]:focus {
+  input[type="text"]:focus, input[type="password"]:focus {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
@@ -598,629 +1370,3 @@ import Layout from '../layouts/Layout.astro';
     }
   }
 </style>
-
-<script>
-  // ----- Extensions list (must match C# app) -----
-  const extensions = [
-    "", ".gif", ".jpg", ".jpeg", ".png", ".lnk", ".link", ".txt", ".html", ".js",
-    ".exe", ".ext", ".pdf", ".psd", ".csv", ".mp3", ".mp4", ".wma", ".avi", ".apk",
-    ".jar", ".ico", ".json", ".iso", ".zip", ".rar", ".tgz", ".tar", ".gz",
-    ".torrent", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"
-  ];
-
-  // Populate extension dropdown
-  const cmbExt = document.getElementById('cmbExtension');
-  extensions.forEach(ext => {
-    const opt = document.createElement('option');
-    opt.value = ext;
-    opt.textContent = ext || '(none)';
-    cmbExt.appendChild(opt);
-  });
-
-  // ----- Custom Select Initialization -----
-  function initCustomSelect(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    
-    select.style.display = 'none';
-    
-    const wrapper = document.createElement('div');
-    wrapper.className = 'custom-select-wrapper';
-    
-    const trigger = document.createElement('div');
-    trigger.className = 'custom-select-trigger';
-    
-    const textContainer = document.createElement('div');
-    textContainer.style.overflow = 'hidden';
-    textContainer.style.position = 'relative';
-    textContainer.style.flex = '1';
-    textContainer.style.display = 'flex';
-    textContainer.style.alignItems = 'center';
-    
-    const triggerText = document.createElement('span');
-    triggerText.textContent = select.options[select.selectedIndex]?.text || '';
-    textContainer.appendChild(triggerText);
-    
-    const arrow = document.createElement('div');
-    arrow.className = 'custom-select-arrow';
-    arrow.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="#9CA3AF" d="M6 8L1 3h10z"/></svg>`;
-    
-    trigger.appendChild(textContainer);
-    trigger.appendChild(arrow);
-    wrapper.appendChild(trigger);
-    
-    const optionsContainer = document.createElement('div');
-    optionsContainer.className = 'custom-select-options';
-    
-    Array.from(select.options).forEach(opt => {
-      const optionDiv = document.createElement('div');
-      optionDiv.className = 'custom-option';
-      optionDiv.textContent = opt.text;
-      optionDiv.dataset.value = opt.value;
-      
-      optionDiv.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (select.value !== opt.value) {
-          triggerText.style.transform = 'translateY(-150%)';
-          triggerText.style.opacity = '0';
-          
-          setTimeout(() => {
-            triggerText.textContent = opt.text;
-            triggerText.style.transition = 'none';
-            triggerText.style.transform = 'translateY(150%)';
-            void triggerText.offsetWidth;
-            
-            triggerText.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
-            triggerText.style.transform = 'translateY(0)';
-            triggerText.style.opacity = '1';
-            
-            select.value = opt.value;
-            select.dispatchEvent(new Event('change'));
-          }, 150);
-        }
-        wrapper.classList.remove('open');
-        trigger.classList.remove('open');
-      });
-      optionsContainer.appendChild(optionDiv);
-    });
-    
-    wrapper.appendChild(optionsContainer);
-    select.parentNode.insertBefore(wrapper, select.nextSibling);
-    
-    trigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = wrapper.classList.contains('open');
-      document.querySelectorAll('.custom-select-wrapper').forEach(w => {
-        w.classList.remove('open');
-        w.querySelector('.custom-select-trigger').classList.remove('open');
-      });
-      if (!isOpen) {
-        wrapper.classList.add('open');
-        trigger.classList.add('open');
-      }
-    });
-    
-    select._customSelectWrapper = wrapper;
-  }
-
-  initCustomSelect('cmbDomain');
-  initCustomSelect('cmbExtension');
-
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.custom-select-wrapper').forEach(w => {
-      w.classList.remove('open');
-      w.querySelector('.custom-select-trigger').classList.remove('open');
-    });
-  });
-
-  function updateCustomSelectUI(select) {
-    if (select && select._customSelectWrapper) {
-      const triggerText = select._customSelectWrapper.querySelector('.custom-select-trigger span');
-      const selectedOpt = select.options[select.selectedIndex];
-      if (selectedOpt && triggerText.textContent !== selectedOpt.text) {
-        triggerText.textContent = selectedOpt.text;
-      }
-    }
-  }
-
-  // ----- State -----
-  let currentCode = null;
-  let loadedIndices = new Set();
-  let allSmartData = [];
-  let autoRefreshTimer = null;
-  let selectedRowData = null;
-  let generatedCanvasBlob = null;
-
-  // ----- Helper: extract code from URL -----
-  function extractCodeFromUrl(url) {
-    const match = url.match(/\/track\/([A-Za-z0-9]+)/);
-    return match ? match[1] : null;
-  }
-
-  // ----- Local storage for extension per code -----
-  function getSavedExtension(code) {
-    try {
-      const data = JSON.parse(localStorage.getItem('grabify_extensions') || '{}');
-      return data[code] || null;
-    } catch { return null; }
-  }
-  function saveExtension(code, ext) {
-    try {
-      const data = JSON.parse(localStorage.getItem('grabify_extensions') || '{}');
-      if (ext) data[code] = ext; else delete data[code];
-      localStorage.setItem('grabify_extensions', JSON.stringify(data));
-    } catch {}
-  }
-
-  // ----- API calls -----
-  async function apiCall(endpoint, body) {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Request failed');
-    return json;
-  }
-
-  // ----- Link Manager functions -----
-  async function createLink() {
-    const url = document.getElementById('urlInput').value.trim();
-    if (!url) return alert('Enter a valid URL.');
-    try { new URL(url); } catch { return alert('Invalid URL (include http:// or https://)'); }
-
-    const btn = document.getElementById('createBtn');
-    btn.disabled = true;
-    btn.textContent = 'Creating...';
-    try {
-      const data = await apiCall('/api/create', { url });
-      document.getElementById('resultLink').value = data.go;
-      currentCode = data.code;
-      if (currentCode) await refreshLinkInfo(currentCode);
-    } catch (e) {
-      alert('Error: ' + e.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Create Grabify Link';
-    }
-  }
-
-  async function loadExisting() {
-    const input = document.getElementById('loadInput').value.trim();
-    if (!input) return alert('Enter code or URL.');
-    const code = extractCodeFromUrl(input) || input;
-    currentCode = code;
-    const btn = document.getElementById('loadBtn');
-    btn.disabled = true;
-    btn.textContent = 'Loading...';
-    try {
-      const data = await apiCall('/api/load', { code });
-      document.getElementById('originalUrl').value = data.originalUrl;
-      document.getElementById('newUrl').value = data.shortLink;
-      document.getElementById('trackingCode').value = data.trackingCode;
-      document.getElementById('accessLink').value = data.accessLink;
-      document.getElementById('chkSmartLogger').checked = data.smart;
-      document.getElementById('chkConsent').checked = data.privacy;
-      document.getElementById('chkGPS').checked = data.gps;
-      document.getElementById('chkForwarding').checked = data.forwarding;
-      document.getElementById('chkPreview').checked = data.preview;
-
-      try {
-        const uri = new URL(data.shortLink);
-        const host = uri.host;
-        let path = uri.pathname.replace(/^\//, '');
-        let fileExt = '';
-        const dotIdx = path.lastIndexOf('.');
-        if (dotIdx > 0 && path.indexOf('/') === -1) {
-          fileExt = path.substring(dotIdx);
-          path = path.substring(0, dotIdx);
-        }
-        const savedExt = getSavedExtension(code);
-        const finalExt = savedExt || fileExt;
-        
-        const cmbDomain = document.getElementById('cmbDomain');
-        cmbDomain.value = host;
-        updateCustomSelectUI(cmbDomain);
-        
-        document.getElementById('txtPath').value = path;
-        
-        const cmbExtEl = document.getElementById('cmbExtension');
-        cmbExtEl.value = extensions.includes(finalExt) ? finalExt : '';
-        updateCustomSelectUI(cmbExtEl);
-      } catch {}
-
-      document.getElementById('resultLink').value = data.shortLink;
-      await refreshVisitors(true);
-    } catch (e) {
-      alert('Error: ' + e.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Load';
-    }
-  }
-
-  async function refreshLinkInfo(code) {
-    if (!code) return;
-    try {
-      const data = await apiCall('/api/load', { code });
-      document.getElementById('originalUrl').value = data.originalUrl;
-      document.getElementById('newUrl').value = data.shortLink;
-      document.getElementById('trackingCode').value = data.trackingCode;
-      document.getElementById('accessLink').value = data.accessLink;
-      document.getElementById('chkSmartLogger').checked = data.smart;
-      document.getElementById('chkConsent').checked = data.privacy;
-      document.getElementById('chkGPS').checked = data.gps;
-      document.getElementById('chkForwarding').checked = data.forwarding;
-      document.getElementById('chkPreview').checked = data.preview;
-
-      try {
-        const uri = new URL(data.shortLink);
-        const host = uri.host;
-        let path = uri.pathname.replace(/^\//, '');
-        let ext = '';
-        const dotIdx = path.lastIndexOf('.');
-        if (dotIdx > 0 && path.indexOf('/') === -1) {
-          ext = path.substring(dotIdx);
-          path = path.substring(0, dotIdx);
-        }
-        const saved = getSavedExtension(code);
-        const finalExt = saved || ext;
-        
-        const cmbDomain = document.getElementById('cmbDomain');
-        cmbDomain.value = host;
-        updateCustomSelectUI(cmbDomain);
-        
-        document.getElementById('txtPath').value = path;
-        
-        const cmbExtEl = document.getElementById('cmbExtension');
-        cmbExtEl.value = extensions.includes(finalExt) ? finalExt : '';
-        updateCustomSelectUI(cmbExtEl);
-      } catch {}
-    } catch (e) {
-      console.error('refreshLinkInfo failed:', e);
-    }
-  }
-
-  async function applySettings() {
-    if (!currentCode) return;
-    const settings = {
-      code: currentCode,
-      smart: document.getElementById('chkSmartLogger').checked ? 'on' : '',
-      privacy: document.getElementById('chkConsent').checked ? 'on' : '',
-      gps: document.getElementById('chkGPS').checked ? 'on' : '',
-      forwarding: document.getElementById('chkForwarding').checked ? 'on' : '',
-      preview: document.getElementById('chkPreview').checked ? 'on' : ''
-    };
-    try {
-      await apiCall('/api/settings', settings);
-    } catch (e) {
-      alert('Settings update failed: ' + e.message);
-    }
-  }
-
-  async function applyCustom() {
-    if (!currentCode) return alert('Create or load a link first.');
-    const domain = document.getElementById('cmbDomain').value;
-    const path = document.getElementById('txtPath').value.trim();
-    const extension = document.getElementById('cmbExtension').value;
-    try {
-      const data = await apiCall('/api/custom', { code: currentCode, domain, path, extension });
-      document.getElementById('newUrl').value = data.shortlink;
-      document.getElementById('resultLink').value = data.shortlink;
-      saveExtension(currentCode, extension);
-      alert('Custom link applied.');
-    } catch (e) {
-      alert('Error: ' + e.message);
-    }
-  }
-
-  async function changeDestination() {
-    if (!currentCode) return alert('Create or load a link first.');
-    const newDest = document.getElementById('newDestination').value.trim();
-    if (!newDest) return alert('Enter a valid destination URL.');
-    try { new URL(newDest); } catch { return alert('Invalid URL.'); }
-    try {
-      await apiCall('/api/destination', { code: currentCode, destination: newDest });
-      alert('Destination updated.');
-      await refreshLinkInfo(currentCode);
-    } catch (e) {
-      alert('Error: ' + e.message);
-    }
-  }
-
-  // ----- Visitors Tab functions -----
-  async function fetchAllVisitors(code, showHideBots = '0') {
-    let page = 1;
-    let allIndices = [];
-    let totalClicks = 0, uniqueClicks = 0;
-    while (true) {
-      const data = await apiCall('/api/visitors', { code, page, showHideBots });
-      totalClicks = data.clicks;
-      uniqueClicks = data.unique;
-      if (data.content && data.content.length > 0) {
-        allIndices.push(...data.content);
-      }
-      if (data.next === 0) break;
-      page = data.next;
-    }
-    return { clicks: totalClicks, unique: uniqueClicks, indices: allIndices };
-  }
-
-  async function getSmartData(code, id) {
-    const data = await apiCall('/api/smart', { code, id });
-    return data.smart;
-  }
-
-  function flattenObject(obj, prefix = '') {
-    const result = {};
-    for (const key in obj) {
-      const value = obj[key];
-      const newKey = prefix ? `${prefix}.${key}` : key;
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        Object.assign(result, flattenObject(value, newKey));
-      } else if (Array.isArray(value)) {
-        result[newKey] = value.join(', ');
-      } else {
-        result[newKey] = value;
-      }
-    }
-    return result;
-  }
-
-  function buildTableColumns(newData) {
-    const allKeys = new Set();
-    newData.forEach(dict => Object.keys(dict).forEach(k => allKeys.add(k)));
-    const ordered = ['date', 'ip', 'isp', 'country', 'city', 'state', 'browser', 'platform', 'bot', 'useragent', 'latitude', 'longitude', 'accuracy', 'accuracy-radius', 'fingerprint'];
-    const columns = [];
-    ordered.forEach(key => {
-      if (allKeys.has(key)) { columns.push(key); allKeys.delete(key); }
-    });
-    allKeys.forEach(key => columns.push(key));
-    return columns;
-  }
-
-  function renderTable() {
-    const thead = document.querySelector('#visitorsTable thead');
-    const tbody = document.querySelector('#visitorsTable tbody');
-    if (allSmartData.length === 0) {
-      thead.innerHTML = '';
-      tbody.innerHTML = '';
-      return;
-    }
-    const columns = buildTableColumns(allSmartData);
-    thead.innerHTML = '<tr>' + columns.map(col => `<th>${col}</th>`).join('') + '</tr>';
-
-    tbody.innerHTML = '';
-    allSmartData.forEach((rowData, idx) => {
-      const tr = document.createElement('tr');
-      const isBot = String(rowData.bot) === '1' || String(rowData.bot) === 'True';
-      tr.classList.toggle('bot-row', isBot);
-      
-      // Row selection logic
-      tr.addEventListener('click', () => {
-        document.querySelectorAll('#visitorsTable tbody tr').forEach(r => r.classList.remove('selected'));
-        tr.classList.add('selected');
-        selectedRowData = rowData;
-        document.getElementById('generateImageBtn').disabled = false;
-      });
-
-      columns.forEach(col => {
-        const td = document.createElement('td');
-        const cellValue = rowData[col] !== undefined ? rowData[col] : '';
-        td.textContent = cellValue;
-        if (cellValue) td.title = cellValue;
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    applyBotFilter();
-  }
-
-  function applyBotFilter() {
-    const hide = document.getElementById('chkHideBots').checked;
-    document.querySelectorAll('#visitorsTable tbody tr').forEach(row => {
-      if (row.classList.contains('bot-row')) {
-        row.style.display = hide ? 'none' : '';
-      } else {
-        row.style.display = '';
-      }
-    });
-  }
-
-  async function refreshVisitors(full = false) {
-    if (!currentCode) return;
-    const btn = document.getElementById('refreshVisitorsBtn');
-    btn.disabled = true;
-    btn.textContent = 'Refreshing...';
-    try {
-      if (full) {
-        loadedIndices.clear();
-        allSmartData = [];
-        selectedRowData = null;
-        document.getElementById('generateImageBtn').disabled = true;
-      }
-      const { clicks, unique, indices } = await fetchAllVisitors(currentCode);
-      document.getElementById('clicksInfo').textContent = `Clicks/Unique: ${clicks}/${unique}`;
-
-      const newIndices = indices.filter(i => !loadedIndices.has(i));
-      if (newIndices.length === 0) return;
-
-      const newData = [];
-      for (const idx of newIndices) {
-        const smart = await getSmartData(currentCode, idx);
-        if (smart) {
-          const flat = flattenObject(smart);
-          newData.push(flat);
-          loadedIndices.add(idx);
-        }
-      }
-      allSmartData.push(...newData);
-      renderTable();
-
-      // Push Notification Logic (only if not initial full load)
-      if (!full && newData.length > 0 && Notification.permission === 'granted') {
-        const latest = newData[newData.length - 1];
-        const ip = latest.ip || 'Unknown IP';
-        const city = latest.city || 'Unknown City';
-        const country = latest.country || 'Unknown Country';
-        
-        new Notification(`New Visitor: ${ip}`, {
-          body: `Location: ${city}, ${country}\nTotal Clicks: ${clicks} | Unique: ${unique}`,
-          icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzAwRTVGRiIvPjwvc3ZnPg=='
-        });
-      }
-
-    } catch (e) {
-      alert('Visitor refresh failed: ' + e.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Refresh Visitors';
-    }
-  }
-
-  // ----- Image Generation Logic -----
-  function generateVisitorImage() {
-    if (!selectedRowData) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 450;
-    canvas.height = 520;
-    const ctx = canvas.getContext('2d');
-
-    // Background
-    ctx.fillStyle = '#0A0A0A';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Header
-    ctx.fillStyle = '#00E5FF';
-    ctx.font = 'bold 22px system-ui, sans-serif';
-    ctx.fillText('Visitor Details', 25, 45);
-
-    // Separator line
-    ctx.strokeStyle = '#2A2A2A';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(25, 65);
-    ctx.lineTo(425, 65);
-    ctx.stroke();
-
-    // Fields to render
-    const fields = ['date', 'ip', 'isp', 'country', 'city', 'state', 'browser', 'platform', 'latitude', 'longitude', 'accuracy', 'accuracy-radius'];
-    let y = 105;
-
-    fields.forEach(field => {
-      // Label
-      ctx.fillStyle = '#9CA3AF';
-      ctx.font = '600 14px system-ui, sans-serif';
-      ctx.fillText(field.toUpperCase() + ':', 25, y);
-
-      // Value
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '14px system-ui, sans-serif';
-      const val = selectedRowData[field] || 'N/A';
-      
-      // Truncate if too long
-      let displayVal = String(val);
-      if (ctx.measureText(displayVal).width > 250) {
-        while (ctx.measureText(displayVal + '...').width > 250 && displayVal.length > 0) {
-          displayVal = displayVal.slice(0, -1);
-        }
-        displayVal += '...';
-      }
-      
-      ctx.fillText(displayVal, 160, y);
-      y += 34;
-    });
-
-    // Set to preview
-    const dataUrl = canvas.toDataURL('image/png');
-    document.getElementById('previewImage').src = dataUrl;
-    
-    // Store blob for copying
-    canvas.toBlob(blob => {
-      generatedCanvasBlob = blob;
-    }, 'image/png');
-
-    // Show Modal
-    document.getElementById('imageModal').classList.add('active');
-  }
-
-  // ----- Event listeners -----
-  document.getElementById('createBtn').addEventListener('click', createLink);
-  document.getElementById('loadBtn').addEventListener('click', loadExisting);
-  document.getElementById('applyCustomBtn').addEventListener('click', applyCustom);
-  document.getElementById('applyDestBtn').addEventListener('click', changeDestination);
-
-  // Copy URL Button
-  document.getElementById('copyUrlBtn').addEventListener('click', async () => {
-    const url = document.getElementById('newUrl').value;
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-      const btn = document.getElementById('copyUrlBtn');
-      const originalText = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = originalText, 2000);
-    } catch (err) {
-      alert('Failed to copy URL.');
-    }
-  });
-
-  // Image Generation & Modal
-  document.getElementById('generateImageBtn').addEventListener('click', generateVisitorImage);
-  document.getElementById('closeModalBtn').addEventListener('click', () => {
-    document.getElementById('imageModal').classList.remove('active');
-  });
-  document.getElementById('copyImageBtn').addEventListener('click', async () => {
-    if (!generatedCanvasBlob) return;
-    try {
-      const item = new ClipboardItem({ 'image/png': generatedCanvasBlob });
-      await navigator.clipboard.write([item]);
-      const btn = document.getElementById('copyImageBtn');
-      const originalText = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = originalText, 2000);
-    } catch (err) {
-      alert('Failed to copy image. Your browser might not support copying images directly.');
-    }
-  });
-
-  // Settings checkboxes auto-save on change
-  ['chkSmartLogger','chkConsent','chkGPS','chkForwarding','chkPreview'].forEach(id => {
-    document.getElementById(id).addEventListener('change', applySettings);
-  });
-
-  // Visitors tab
-  document.getElementById('refreshVisitorsBtn').addEventListener('click', () => refreshVisitors(false));
-  document.getElementById('chkHideBots').addEventListener('change', applyBotFilter);
-  
-  // Auto Refresh & Notifications
-  document.getElementById('chkAutoRefresh').addEventListener('change', function() {
-    if (this.checked) {
-      // Request notification permission if not already granted/denied
-      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-        Notification.requestPermission();
-      }
-      
-      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-      autoRefreshTimer = setInterval(() => refreshVisitors(false), 7500);
-    } else {
-      clearInterval(autoRefreshTimer);
-      autoRefreshTimer = null;
-    }
-  });
-
-  // Tab switching
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
-    });
-  });
-
-  // Initial cleanup if needed
-  window.addEventListener('beforeunload', () => clearInterval(autoRefreshTimer));
-</script>
