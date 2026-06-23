@@ -4,14 +4,14 @@ import Layout from '../layouts/Layout.astro';
 
 <Layout title="Grabify Manager | Mastercodeon">
   <main>
-    <h1 style="text-align: center; color: var(--accent-color); margin-bottom: 2rem;">Grabify Link Manager</h1>
+    <h1 style="text-align: center; color: var(--accent-color); margin-bottom: 2rem;">Grabify Link Tracker</h1>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="manager">Link Manager</button>
+      <button class="tab-btn active" data-tab="manager">Link Tracker</button>
       <button class="tab-btn" data-tab="image">Image Tracker</button>
     </div>
 
-    <!-- LINK MANAGER TAB (Original) -->
+    <!-- LINK TRACKER TAB (Original) -->
     <div id="tab-manager" class="tab-panel active">
       <div class="input-group-container">
         <div class="input-group">
@@ -86,7 +86,7 @@ import Layout from '../layouts/Layout.astro';
         </div>
       </div>
 
-      <!-- VISITORS SECTION (Merged into Link Manager) -->
+      <!-- VISITORS SECTION (Merged into Link Tracker) -->
       <div class="visitors-toolbar" style="margin-top: 2rem;">
         <span id="clicksInfo">Clicks/Unique: 0/0</span>
         <button id="refreshVisitorsBtn">Refresh Visitors</button>
@@ -351,7 +351,7 @@ import Layout from '../layouts/Layout.astro';
     }
 
     // ----- State -----
-    // Link Manager
+    // Link Tracker
     let currentCode = null;
     let loadedIndices = new Set();
     let allSmartData = [];
@@ -402,7 +402,7 @@ import Layout from '../layouts/Layout.astro';
       return json;
     }
 
-    // ----- Link Manager functions -----
+    // ----- Link Tracker functions -----
     async function createLink() {
       const url = document.getElementById('urlInput').value.trim();
       if (!url) return showToast('Enter a valid URL.', true);
