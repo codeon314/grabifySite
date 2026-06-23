@@ -32,6 +32,24 @@ import Layout from '../layouts/Layout.astro';
       }, 3000);
     }
 
+    // Generates a robust SHA-256 hardware/browser fingerprint
+    async function generateFingerprint() {
+      const components = [
+        navigator.userAgent,
+        navigator.language,
+        screen.colorDepth,
+        screen.width + 'x' + screen.height,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        navigator.hardwareConcurrency || 'unknown',
+        navigator.deviceMemory || 'unknown'
+      ].join('|');
+
+      const msgBuffer = new TextEncoder().encode(components);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
       e.preventDefault();
 
@@ -48,14 +66,22 @@ import Layout from '../layouts/Layout.astro';
       btn.textContent = 'Checking...';
 
       try {
+        const fingerprint = await generateFingerprint();
+
         const res = await fetch('/api/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Client-Fingerprint': fingerprint
+          },
           body: JSON.stringify({ password })
         });
 
         if (res.ok) {
           window.location.href = '/';
+        } else if (res.status === 429) {
+          const data = await res.json();
+          showToast(data.error || 'Rate limit exceeded. Please wait.', true);
         } else {
           pwdInput.classList.add('input-error');
           pwdInput.value = '';
