@@ -40,6 +40,7 @@ import Layout from '../layouts/Layout.astro';
           <div class="input-group" style="flex: 1;">
             <input type="text" id="newUrl" readonly />
             <button id="copyUrlBtn" title="Copy to clipboard">Copy</button>
+            <button id="qrBtn" title="Generate QR Code">QR</button>
           </div>
         </div>
         <div class="info-row">
@@ -128,6 +129,7 @@ import Layout from '../layouts/Layout.astro';
           <div class="input-group" style="flex: 1;">
             <input type="text" id="imgNewUrl" readonly />
             <button id="imgCopyUrlBtn" title="Copy to clipboard">Copy</button>
+            <button id="imgQrBtn" title="Generate QR Code">QR</button>
           </div>
         </div>
         <div class="info-row">
@@ -197,6 +199,39 @@ import Layout from '../layouts/Layout.astro';
       <div class="modal-actions">
         <button id="copyImageBtn">Copy Image</button>
         <button id="closeModalBtn" style="background-color: #333; color: #FFF;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR CODE MODAL -->
+  <div id="qrModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>QR Code Generator</h3>
+      <div class="modal-image-container" style="background: #fff; padding: 1rem;">
+        <img id="qrPreviewImage" src="" alt="Generated QR Code" style="width: 256px; height: 256px; object-fit: contain;" />
+      </div>
+      <div class="qr-controls">
+        <div class="qr-control-group">
+          <label>Size</label>
+          <select id="qrSize">
+            <option value="256x256">256 x 256</option>
+            <option value="512x512">512 x 512</option>
+            <option value="1024x1024">1024 x 1024</option>
+          </select>
+        </div>
+        <div class="qr-control-group">
+          <label>Format</label>
+          <select id="qrFormat">
+            <option value="png">PNG</option>
+            <option value="jpeg">JPEG</option>
+            <option value="svg">SVG</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="copyQrBtn">Copy QR Code</button>
+        <button id="downloadQrBtn">Download</button>
+        <button id="closeQrModalBtn" style="background-color: #333; color: #FFF;">Close</button>
       </div>
     </div>
   </div>
@@ -407,6 +442,8 @@ import Layout from '../layouts/Layout.astro';
     let imageAutoRefreshTimer = null;
     let imageSelectedRowData = null;
     let imageGeneratedCanvasBlob = null;
+    // QR Code
+    let currentQrUrl = '';
 
     // ----- Helper: extract code from URL -----
     function extractCodeFromUrl(url) {
@@ -826,6 +863,70 @@ import Layout from '../layouts/Layout.astro';
       // Show Modal
       document.getElementById('imageModal').classList.add('active');
     }
+
+    // ========================
+    // QR CODE GENERATOR LOGIC
+    // ========================
+    function openQrModal(url) {
+      if (!url) return showToast('No URL to generate QR code for.', true);
+      currentQrUrl = url;
+      updateQrPreview();
+      document.getElementById('qrModal').classList.add('active');
+    }
+
+    function updateQrPreview() {
+      const size = document.getElementById('qrSize').value;
+      const format = document.getElementById('qrFormat').value;
+      const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${size}&format=${format}&data=${encodeURIComponent(currentQrUrl)}`;
+      document.getElementById('qrPreviewImage').src = qrSrc;
+    }
+
+    document.getElementById('qrSize').addEventListener('change', updateQrPreview);
+    document.getElementById('qrFormat').addEventListener('change', updateQrPreview);
+
+    document.getElementById('qrBtn').addEventListener('click', () => openQrModal(document.getElementById('newUrl').value));
+    document.getElementById('imgQrBtn').addEventListener('click', () => openQrModal(document.getElementById('imgNewUrl').value));
+
+    document.getElementById('closeQrModalBtn').addEventListener('click', () => {
+      document.getElementById('qrModal').classList.remove('active');
+    });
+
+    document.getElementById('copyQrBtn').addEventListener('click', async (e) => {
+      const size = document.getElementById('qrSize').value;
+      // Always fetch as PNG for clipboard compatibility
+      const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${size}&format=png&data=${encodeURIComponent(currentQrUrl)}`;
+      try {
+        const response = await fetch(qrSrc);
+        const blob = await response.blob();
+        const item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        showToast('QR Code copied to clipboard!');
+        setButtonCopied(e.currentTarget, 'Copied QR Code');
+      } catch (err) {
+        showToast('Failed to copy QR Code.', true);
+      }
+    });
+
+    document.getElementById('downloadQrBtn').addEventListener('click', async () => {
+      const size = document.getElementById('qrSize').value;
+      const format = document.getElementById('qrFormat').value;
+      const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${size}&format=${format}&data=${encodeURIComponent(currentQrUrl)}`;
+      try {
+        const response = await fetch(qrSrc);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `qrcode.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        showToast('QR Code downloaded!');
+      } catch (err) {
+        showToast('Failed to download QR Code.', true);
+      }
+    });
 
     // ========================
     // IMAGE TRACKER FUNCTIONS
@@ -1779,6 +1880,38 @@ import Layout from '../layouts/Layout.astro';
     justify-content: flex-end;
   }
 
+  /* QR Controls Styling */
+  .qr-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .qr-control-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .qr-control-group label {
+    color: #9CA3AF;
+    font-size: 0.9rem;
+  }
+  .qr-control-group select {
+    background-color: #111;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .qr-control-group select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+
   /* Mobile Responsiveness */
   @media (max-width: 768px) {
     /* Keep standard input groups inline */
@@ -1800,11 +1933,15 @@ import Layout from '../layouts/Layout.astro';
 
     .info-row { 
       flex-direction: column; 
-      align-items: flex-start; 
+      align-items: stretch; /* Make children take full width */
       gap: 0.4rem; 
     }
     .info-row label { 
       width: auto; 
+    }
+    .info-row input {
+      width: 100%;
+      box-sizing: border-box;
     }
     
     /* Stack embed rows and make code scrollable */
@@ -1832,6 +1969,18 @@ import Layout from '../layouts/Layout.astro';
     }
     .toolbar-toggles {
       justify-content: space-between;
+    }
+
+    /* QR Modal Mobile Adjustments */
+    .qr-controls {
+      flex-direction: column;
+    }
+    .modal-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .modal-actions button {
+      width: 100%;
     }
   }
 </style>

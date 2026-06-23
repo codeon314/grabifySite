@@ -87,8 +87,8 @@ const { title, hideNav = false } = Astro.props;
       background-color: var(--card-bg);
       flex-direction: column;
       justify-content: flex-start;
-      align-items: flex-start;
-      padding: 6rem 3rem 2rem 1.5rem;
+      align-items: stretch; /* Stretch children to full width */
+      padding: 6rem 1.5rem 2rem 1.5rem;
       gap: 2rem;
       transform: translateX(-100%);
       transition: transform 0.3s ease-in-out;
@@ -98,6 +98,11 @@ const { title, hideNav = false } = Astro.props;
 
     nav.is-open {
       transform: translateX(0);
+    }
+
+    .logout-btn {
+      width: 100%;
+      text-align: center;
     }
 
     .hamburger {
@@ -157,16 +162,19 @@ const { title, hideNav = false } = Astro.props;
     }
 
     if (hamburger && nav && overlay) {
-      const toggleMenu = () => {
-        const isOpen = nav.classList.toggle('is-open');
-        overlay.classList.toggle('is-open', isOpen);
-        hamburger.setAttribute('aria-expanded', isOpen);
-      };
-
+      // Clone nodes to remove old event listeners
       hamburger.replaceWith(hamburger.cloneNode(true));
       overlay.replaceWith(overlay.cloneNode(true));
+      
+      // Re-select the fresh nodes
       const newHamburger = document.querySelector('.hamburger');
       const newOverlay = document.querySelector('.overlay');
+      
+      const toggleMenu = () => {
+        const isOpen = nav.classList.toggle('is-open');
+        newOverlay.classList.toggle('is-open', isOpen);
+        newHamburger.setAttribute('aria-expanded', isOpen);
+      };
       
       newHamburger.addEventListener('click', toggleMenu);
       newOverlay.addEventListener('click', toggleMenu);
