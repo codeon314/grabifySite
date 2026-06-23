@@ -8,10 +8,8 @@ async function grabifyRequest(path, method, body, cookie) {
   };
 
   if (method === 'GET') {
-    // NO X-Requested-With for GET (otherwise Grabify returns JSON error)
     headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
   } else {
-    // POST: AJAX headers only
     headers['Accept'] = 'application/json, text/javascript, */*; q=0.01';
     headers['X-Requested-With'] = 'XMLHttpRequest';
   }
@@ -47,7 +45,6 @@ async function grabifyRequest(path, method, body, cookie) {
   return json;
 }
 
-// Cookie parsing
 function parseCookies(cookieHeader) {
   const cookies = {};
   if (cookieHeader) {
@@ -61,33 +58,28 @@ function parseCookies(cookieHeader) {
   return cookies;
 }
 
-export const ALL = async ({ request, url, locals }) => {
-  // Safely extract the route name regardless of trailing slashes
+// Explicitly export POST to prevent 405 errors in Astro's router
+export const POST = async ({ request, url, locals }) => {
   const route = url.pathname.replace(/\/$/, '').split('/').pop();
   
-  // Safely parse JSON body only if it's a POST request
   let body = {};
-  if (request.method === 'POST') {
-    try {
-      body = await request.json();
-    } catch (e) {
-      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
-    }
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
   }
 
   // --- SECURE LOGIN HANDLER ---
   if (route === 'login') {
     const { password } = body;
-    // Safely check environment variables to prevent Cloudflare crashes
     const runtimeEnv = locals.runtime?.env || (typeof process !== 'undefined' ? process.env : {});
-    const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || import.meta.env.SITE_PASSWORD || 'dev';
+    const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || (import.meta.env ? import.meta.env.SITE_PASSWORD : null) || 'dev';
     
     if (password === SITE_PASSWORD) {
       return new Response(JSON.stringify({ success: true }), {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          // Set secure auth cookie valid for 7 days
           'Set-Cookie': `site_auth=${password}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
         }
       });
@@ -243,4 +235,12 @@ export const ALL = async ({ request, url, locals }) => {
   }
 
   return new Response(JSON.stringify(responseBody), init);
-}
+};
+
+// Explicitly export GET to catch trailing slash redirects or direct browser hits
+export const GET = async ({ url }) => {
+  return new Response(JSON.stringify({ error: `GET method not supported for ${url.pathname}. Please use POST.` }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json' }
+  });
+};

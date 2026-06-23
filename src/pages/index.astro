@@ -3,9 +3,8 @@
 import Layout from '../layouts/Layout.astro';
 
 // Secure Server-Side Authentication for Cloudflare Pages
-// Safely check environment variables to prevent Cloudflare crashes
 const runtimeEnv = Astro.locals.runtime?.env || (typeof process !== 'undefined' ? process.env : {});
-const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || import.meta.env.SITE_PASSWORD || 'dev';
+const SITE_PASSWORD = runtimeEnv.SITE_PASSWORD || (import.meta.env ? import.meta.env.SITE_PASSWORD : null) || 'dev';
 
 let isAuthenticated = false;
 
@@ -789,11 +788,11 @@ if (Astro.cookies.has('site_auth')) {
       <main class="login-main">
         <div class="login-box">
           <h1 style="color: var(--accent-color); text-align: center; margin-bottom: 1.5rem;">Access Restricted</h1>
-          <!-- Added onsubmit="event.preventDefault();" to absolutely prevent native form submission/page refresh -->
-          <form id="loginForm" class="login-form" onsubmit="event.preventDefault();">
+          <!-- The <form> tag has been completely removed to make a page refresh physically impossible -->
+          <div id="loginContainer" class="login-form">
             <input type="password" id="pwdInput" placeholder="Enter Password" required autofocus />
-            <button type="submit" id="loginBtn">Login</button>
-          </form>
+            <button type="button" id="loginBtn">Login</button>
+          </div>
         </div>
       </main>
 
@@ -817,11 +816,15 @@ if (Astro.cookies.has('site_auth')) {
           }, 3000);
         }
 
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-          e.preventDefault();
+        async function handleLogin() {
           const pwdInput = document.getElementById('pwdInput');
           const password = pwdInput.value;
           const btn = document.getElementById('loginBtn');
+
+          if (!password) {
+            showToast('Please enter a password', true);
+            return;
+          }
 
           btn.disabled = true;
           btn.textContent = 'Checking...';
@@ -852,6 +855,17 @@ if (Astro.cookies.has('site_auth')) {
           } finally {
             btn.disabled = false;
             btn.textContent = 'Login';
+          }
+        }
+
+        // Attach click listener to button
+        document.getElementById('loginBtn').addEventListener('click', handleLogin);
+        
+        // Attach Enter key listener to input field
+        document.getElementById('pwdInput').addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleLogin();
           }
         });
       </script>
