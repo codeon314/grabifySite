@@ -58,7 +58,6 @@ function parseCookies(cookieHeader) {
   return cookies;
 }
 
-// Explicitly export POST to prevent 405 errors in Astro's router
 export const POST = async ({ request, url, locals }) => {
   const route = url.pathname.replace(/\/$/, '').split('/').pop();
   
@@ -237,7 +236,6 @@ export const POST = async ({ request, url, locals }) => {
   return new Response(JSON.stringify(responseBody), init);
 };
 
-// Explicitly export GET to catch trailing slash redirects or direct browser hits
 export const GET = async ({ url }) => {
   return new Response(JSON.stringify({ error: `GET method not supported for ${url.pathname}. Please use POST.` }), {
     status: 405,
