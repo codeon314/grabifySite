@@ -83,12 +83,17 @@ export async function onRequestPost(context) {
   try {
     switch (route) {
       case 'create': {
-        const { url: targetUrl } = body;
+        const { url: targetUrl, type = 'shorten' } = body;
         if (!targetUrl) return new Response(JSON.stringify({ error: 'URL required' }), { status: 400 });
         const formData = new URLSearchParams();
         formData.append('url', targetUrl);
-        formData.append('type', 'shorten');
-        const result = await grabifyRequest('/', 'POST', formData, `confirmation=${confirmation}`);
+        formData.append('type', type);          // "shorten" or "pixel"
+        const result = await grabifyRequest(
+          type === 'pixel' ? '/main/' : '/',
+          'POST',
+          formData,
+          `confirmation=${confirmation}`
+        );
         const go = result.go;
         const codeMatch = go.match(/\/track\/([A-Za-z0-9]+)/);
         const code = codeMatch ? codeMatch[1] : null;

@@ -8,10 +8,11 @@ import Layout from '../layouts/Layout.astro';
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="manager">Link Manager</button>
+      <button class="tab-btn" data-tab="image">Image Tracker</button>
       <button class="tab-btn" data-tab="visitors">Visitors</button>
     </div>
 
-    <!-- LINK MANAGER TAB -->
+    <!-- LINK MANAGER TAB (Original) -->
     <div id="tab-manager" class="tab-panel active">
       <div class="input-group-container">
         <div class="input-group">
@@ -87,7 +88,94 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
 
-    <!-- VISITORS TAB -->
+    <!-- IMAGE TRACKER TAB (NEW) -->
+    <div id="tab-image" class="tab-panel">
+      <div class="input-group-container">
+        <div class="input-group">
+          <input type="text" id="imgUrlInput" placeholder="Enter destination URL (https://...)" />
+          <button id="imgCreateBtn">Generate Tracking Pixel</button>
+        </div>
+        <input type="text" id="imgResultLink" readonly placeholder="Tracking pixel link will appear here..." />
+      </div>
+
+      <div class="load-section">
+        <label for="imgLoadInput">Load existing (code or URL):</label>
+        <div class="input-group">
+          <input type="text" id="imgLoadInput" placeholder="Tracking code or full tracking URL" />
+          <button id="imgLoadBtn">Load</button>
+        </div>
+      </div>
+
+      <div class="info-group">
+        <h3>Link Information</h3>
+        <div class="info-row">
+          <label>Original URL:</label>
+          <input type="text" id="imgOriginalUrl" readonly />
+        </div>
+        <div class="info-row">
+          <label>New URL:</label>
+          <div class="input-group" style="flex: 1;">
+            <input type="text" id="imgNewUrl" readonly />
+            <button id="imgCopyUrlBtn" title="Copy to clipboard">Copy</button>
+          </div>
+        </div>
+        <div class="info-row">
+          <label>Tracking Code:</label>
+          <input type="text" id="imgTrackingCode" readonly />
+        </div>
+        <div class="info-row">
+          <label>Access Link:</label>
+          <input type="text" id="imgAccessLink" readonly />
+        </div>
+      </div>
+
+      <div class="custom-group">
+        <h3>Customize Link</h3>
+        <div class="input-group">
+          <select id="imgCmbDomain">
+            <option value="onbit.pro">onbit.pro</option>
+            <option value="snifferip.com">snifferip.com</option>
+            <option value="unl.one">unl.one</option>
+            <option value="urlto.me">urlto.me</option>
+          </select>
+          <input type="text" id="imgTxtPath" placeholder="Custom path (optional)" />
+          <select id="imgCmbExtension"></select>
+          <button id="imgApplyCustomBtn">Apply</button>
+        </div>
+      </div>
+
+      <div class="embed-group" id="imgEmbedGroup" style="display:none;">
+        <h3>Embed this pixel</h3>
+        <p>To implement on a website, insert the following HTML tag:</p>
+        <div class="embed-row">
+          <code id="imgEmbedHtml">&lt;img src=&quot;<span id="imgEmbedUrlSpan">YOUR_LINK</span>&quot;&gt;</code>
+          <button class="copy-embed-btn" data-target="imgEmbedHtml">Copy HTML</button>
+        </div>
+        <p>For forums (BBCode):</p>
+        <div class="embed-row">
+          <code id="imgEmbedBbcode">[img]<span id="imgEmbedUrlBbSpan">YOUR_LINK</span>[/img]</code>
+          <button class="copy-embed-btn" data-target="imgEmbedBbcode">Copy BBCode</button>
+        </div>
+      </div>
+
+      <div class="visitors-toolbar">
+        <span id="imgClicksInfo">Clicks/Unique: 0/0</span>
+        <button id="imgRefreshVisitorsBtn">Refresh Visitors</button>
+        <button id="imgGenerateImageBtn" disabled>Generate Image</button>
+        <div class="toolbar-toggles">
+          <label><input type="checkbox" id="imgChkHideBots" /> Hide Bots</label>
+          <label><input type="checkbox" id="imgChkAutoRefresh" /> Auto Refresh</label>
+        </div>
+      </div>
+      <div class="visitors-table-container">
+        <table id="imgVisitorsTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- VISITORS TAB (Original) -->
     <div id="tab-visitors" class="tab-panel">
       <div class="visitors-toolbar">
         <span id="clicksInfo">Clicks/Unique: 0/0</span>
@@ -150,14 +238,17 @@ import Layout from '../layouts/Layout.astro';
       ".torrent", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"
     ];
 
-    // Populate extension dropdown
-    const cmbExt = document.getElementById('cmbExtension');
-    extensions.forEach(ext => {
-      const opt = document.createElement('option');
-      opt.value = ext;
-      opt.textContent = ext || '(none)';
-      cmbExt.appendChild(opt);
-    });
+    // Populate extension dropdowns
+    function populateExtension(selectElement) {
+      extensions.forEach(ext => {
+        const opt = document.createElement('option');
+        opt.value = ext;
+        opt.textContent = ext || '(none)';
+        selectElement.appendChild(opt);
+      });
+    }
+    populateExtension(document.getElementById('cmbExtension'));
+    populateExtension(document.getElementById('imgCmbExtension'));
 
     // ----- Custom Select Initialization -----
     function initCustomSelect(selectId) {
@@ -247,6 +338,8 @@ import Layout from '../layouts/Layout.astro';
 
     initCustomSelect('cmbDomain');
     initCustomSelect('cmbExtension');
+    initCustomSelect('imgCmbDomain');
+    initCustomSelect('imgCmbExtension');
 
     document.addEventListener('click', () => {
       document.querySelectorAll('.custom-select-wrapper').forEach(w => {
@@ -266,12 +359,20 @@ import Layout from '../layouts/Layout.astro';
     }
 
     // ----- State -----
+    // Link Manager
     let currentCode = null;
     let loadedIndices = new Set();
     let allSmartData = [];
     let autoRefreshTimer = null;
     let selectedRowData = null;
     let generatedCanvasBlob = null;
+    // Image Tracker
+    let currentImageCode = null;
+    let imageLoadedIndices = new Set();
+    let imageAllSmartData = [];
+    let imageAutoRefreshTimer = null;
+    let imageSelectedRowData = null;
+    let imageGeneratedCanvasBlob = null;
 
     // ----- Helper: extract code from URL -----
     function extractCodeFromUrl(url) {
@@ -542,7 +643,6 @@ import Layout from '../layouts/Layout.astro';
         const isBot = String(rowData.bot) === '1' || String(rowData.bot) === 'True';
         tr.classList.toggle('bot-row', isBot);
         
-        // Row selection logic
         tr.addEventListener('click', () => {
           document.querySelectorAll('#visitorsTable tbody tr').forEach(r => r.classList.remove('selected'));
           tr.classList.add('selected');
@@ -603,7 +703,6 @@ import Layout from '../layouts/Layout.astro';
         allSmartData.push(...newData);
         renderTable();
 
-        // Push Notification Logic (only if not initial full load)
         if (!full && newData.length > 0 && Notification.permission === 'granted') {
           const latest = newData[newData.length - 1];
           const ip = latest.ip || 'Unknown IP';
@@ -691,13 +790,312 @@ import Layout from '../layouts/Layout.astro';
       document.getElementById('imageModal').classList.add('active');
     }
 
-    // ----- Event listeners -----
+    // ========================
+    // IMAGE TRACKER FUNCTIONS
+    // ========================
+
+    // Update embed helpers with the current tracking URL
+    function updateImageEmbeds(newUrl) {
+      const urlSpan = document.getElementById('imgEmbedUrlSpan');
+      const urlBbSpan = document.getElementById('imgEmbedUrlBbSpan');
+      if (urlSpan) urlSpan.textContent = newUrl;
+      if (urlBbSpan) urlBbSpan.textContent = newUrl;
+      document.getElementById('imgEmbedGroup').style.display = newUrl ? 'block' : 'none';
+    }
+
+    async function imgCreateLink() {
+      const url = document.getElementById('imgUrlInput').value.trim();
+      if (!url) return showToast('Enter a destination URL.', true);
+      try { new URL(url); } catch { return showToast('Invalid URL (include http:// or https://)', true); }
+
+      const btn = document.getElementById('imgCreateBtn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      try {
+        const data = await apiCall('/api/create', { url, type: 'pixel' });
+        document.getElementById('imgResultLink').value = data.go;
+        currentImageCode = data.code;
+        if (currentImageCode) await imgRefreshLinkInfo(currentImageCode);
+        showToast('Pixel tracking link created!');
+      } catch (e) {
+        showToast('Error: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Tracking Pixel';
+      }
+    }
+
+    async function imgLoadExisting() {
+      const input = document.getElementById('imgLoadInput').value.trim();
+      if (!input) return showToast('Enter code or URL.', true);
+      const code = extractCodeFromUrl(input) || input;
+      currentImageCode = code;
+      const btn = document.getElementById('imgLoadBtn');
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+      try {
+        const data = await apiCall('/api/load', { code });
+        document.getElementById('imgOriginalUrl').value = data.originalUrl;
+        document.getElementById('imgNewUrl').value = data.shortLink;
+        document.getElementById('imgTrackingCode').value = data.trackingCode;
+        document.getElementById('imgAccessLink').value = data.accessLink;
+
+        try {
+          const uri = new URL(data.shortLink);
+          const host = uri.host;
+          let path = uri.pathname.replace(/^\//, '');
+          let fileExt = '';
+          const dotIdx = path.lastIndexOf('.');
+          if (dotIdx > 0 && path.indexOf('/') === -1) {
+            fileExt = path.substring(dotIdx);
+            path = path.substring(0, dotIdx);
+          }
+          document.getElementById('imgCmbDomain').value = host;
+          updateCustomSelectUI(document.getElementById('imgCmbDomain'));
+          document.getElementById('imgTxtPath').value = path;
+          document.getElementById('imgCmbExtension').value = extensions.includes(fileExt) ? fileExt : '';
+          updateCustomSelectUI(document.getElementById('imgCmbExtension'));
+        } catch {}
+
+        document.getElementById('imgResultLink').value = data.shortLink;
+        updateImageEmbeds(data.shortLink);
+        await imgRefreshVisitors(true);
+        showToast('Pixel link loaded successfully!');
+      } catch (e) {
+        showToast('Error: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Load';
+      }
+    }
+
+    async function imgRefreshLinkInfo(code) {
+      if (!code) return;
+      try {
+        const data = await apiCall('/api/load', { code });
+        document.getElementById('imgOriginalUrl').value = data.originalUrl;
+        document.getElementById('imgNewUrl').value = data.shortLink;
+        document.getElementById('imgTrackingCode').value = data.trackingCode;
+        document.getElementById('imgAccessLink').value = data.accessLink;
+
+        try {
+          const uri = new URL(data.shortLink);
+          const host = uri.host;
+          let path = uri.pathname.replace(/^\//, '');
+          let ext = '';
+          const dotIdx = path.lastIndexOf('.');
+          if (dotIdx > 0 && path.indexOf('/') === -1) {
+            ext = path.substring(dotIdx);
+            path = path.substring(0, dotIdx);
+          }
+          document.getElementById('imgCmbDomain').value = host;
+          updateCustomSelectUI(document.getElementById('imgCmbDomain'));
+          document.getElementById('imgTxtPath').value = path;
+          document.getElementById('imgCmbExtension').value = extensions.includes(ext) ? ext : '';
+          updateCustomSelectUI(document.getElementById('imgCmbExtension'));
+        } catch {}
+        updateImageEmbeds(data.shortLink);
+      } catch (e) {
+        console.error('imgRefreshLinkInfo failed:', e);
+      }
+    }
+
+    async function imgApplyCustom() {
+      if (!currentImageCode) return showToast('Create or load a pixel link first.', true);
+      const domain = document.getElementById('imgCmbDomain').value;
+      const path = document.getElementById('imgTxtPath').value.trim();
+      const extension = document.getElementById('imgCmbExtension').value;
+      try {
+        const data = await apiCall('/api/custom', { code: currentImageCode, domain, path, extension });
+        document.getElementById('imgNewUrl').value = data.shortlink;
+        document.getElementById('imgResultLink').value = data.shortlink;
+        updateImageEmbeds(data.shortlink);
+        showToast('Custom link applied.');
+      } catch (e) {
+        showToast('Error: ' + e.message, true);
+      }
+    }
+
+    // ----- Image Tab Visitors (mirrors main visitors logic) -----
+    async function imgFetchAllVisitors(code, showHideBots = '0') {
+      let page = 1;
+      let allIndices = [];
+      let totalClicks = 0, uniqueClicks = 0;
+      while (true) {
+        const data = await apiCall('/api/visitors', { code, page, showHideBots });
+        totalClicks = data.clicks;
+        uniqueClicks = data.unique;
+        if (data.content && data.content.length > 0) allIndices.push(...data.content);
+        if (data.next === 0) break;
+        page = data.next;
+      }
+      return { clicks: totalClicks, unique: uniqueClicks, indices: allIndices };
+    }
+
+    async function imgGetSmartData(code, id) {
+      const data = await apiCall('/api/smart', { code, id });
+      return data.smart;
+    }
+
+    function imgFlattenObject(obj, prefix = '') {
+      const result = {};
+      for (const key in obj) {
+        const value = obj[key];
+        const newKey = prefix ? `${prefix}.${key}` : key;
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          Object.assign(result, imgFlattenObject(value, newKey));
+        } else if (Array.isArray(value)) {
+          result[newKey] = value.join(', ');
+        } else {
+          result[newKey] = value;
+        }
+      }
+      return result;
+    }
+
+    function imgBuildTableColumns(newData) {
+      const allKeys = new Set();
+      newData.forEach(dict => Object.keys(dict).forEach(k => allKeys.add(k)));
+      const ordered = ['date','ip','isp','country','city','state','browser','platform','bot','useragent','latitude','longitude','accuracy','accuracy-radius','fingerprint'];
+      const columns = [];
+      ordered.forEach(key => { if (allKeys.has(key)) { columns.push(key); allKeys.delete(key); } });
+      allKeys.forEach(key => columns.push(key));
+      return columns;
+    }
+
+    function imgRenderTable() {
+      const thead = document.querySelector('#imgVisitorsTable thead');
+      const tbody = document.querySelector('#imgVisitorsTable tbody');
+      if (imageAllSmartData.length === 0) {
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+        return;
+      }
+      const columns = imgBuildTableColumns(imageAllSmartData);
+      thead.innerHTML = '<tr>' + columns.map(col => `<th>${col}</th>`).join('') + '</tr>';
+
+      tbody.innerHTML = '';
+      imageAllSmartData.forEach((rowData, idx) => {
+        const tr = document.createElement('tr');
+        const isBot = String(rowData.bot) === '1' || String(rowData.bot) === 'True';
+        tr.classList.toggle('bot-row', isBot);
+
+        tr.addEventListener('click', () => {
+          document.querySelectorAll('#imgVisitorsTable tbody tr').forEach(r => r.classList.remove('selected'));
+          tr.classList.add('selected');
+          imageSelectedRowData = rowData;
+          document.getElementById('imgGenerateImageBtn').disabled = false;
+        });
+
+        columns.forEach(col => {
+          const td = document.createElement('td');
+          const cellValue = rowData[col] !== undefined ? rowData[col] : '';
+          td.textContent = cellValue;
+          if (cellValue) td.title = cellValue;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      imgApplyBotFilter();
+    }
+
+    function imgApplyBotFilter() {
+      const hide = document.getElementById('imgChkHideBots').checked;
+      document.querySelectorAll('#imgVisitorsTable tbody tr').forEach(row => {
+        row.style.display = (row.classList.contains('bot-row') && hide) ? 'none' : '';
+      });
+    }
+
+    async function imgRefreshVisitors(full = false) {
+      if (!currentImageCode) return;
+      const btn = document.getElementById('imgRefreshVisitorsBtn');
+      btn.disabled = true;
+      btn.textContent = 'Refreshing...';
+      try {
+        if (full) {
+          imageLoadedIndices.clear();
+          imageAllSmartData = [];
+          imageSelectedRowData = null;
+          document.getElementById('imgGenerateImageBtn').disabled = true;
+        }
+        const { clicks, unique, indices } = await imgFetchAllVisitors(currentImageCode);
+        document.getElementById('imgClicksInfo').textContent = `Clicks/Unique: ${clicks}/${unique}`;
+
+        const newIndices = indices.filter(i => !imageLoadedIndices.has(i));
+        if (newIndices.length === 0) return;
+
+        const newData = [];
+        for (const idx of newIndices) {
+          const smart = await imgGetSmartData(currentImageCode, idx);
+          if (smart) {
+            const flat = imgFlattenObject(smart);
+            newData.push(flat);
+            imageLoadedIndices.add(idx);
+          }
+        }
+        imageAllSmartData.push(...newData);
+        imgRenderTable();
+
+        if (!full && newData.length > 0 && Notification.permission === 'granted') {
+          const latest = newData[newData.length - 1];
+          new Notification(`New Visitor: ${latest.ip || 'Unknown IP'}`, {
+            body: `Location: ${latest.city || '?'}, ${latest.country || '?'}\nClicks: ${clicks} / Unique: ${unique}`,
+            icon: 'data:image/svg+xml;base64,...'
+          });
+        }
+      } catch (e) {
+        showToast('Visitor refresh failed: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Refresh Visitors';
+      }
+    }
+
+    function imgGenerateVisitorImage() {
+      if (!imageSelectedRowData) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = 450; canvas.height = 520;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0A0A0A';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00E5FF';
+      ctx.font = 'bold 22px system-ui, sans-serif';
+      ctx.fillText('Visitor Details', 25, 45);
+      ctx.strokeStyle = '#2A2A2A';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(25, 65);
+      ctx.lineTo(425, 65);
+      ctx.stroke();
+      const fields = ['date','ip','isp','country','city','state','browser','platform','latitude','longitude','accuracy','accuracy-radius'];
+      let y = 105;
+      fields.forEach(field => {
+        ctx.fillStyle = '#9CA3AF';
+        ctx.font = '600 14px system-ui, sans-serif';
+        ctx.fillText(field.toUpperCase() + ':', 25, y);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '14px system-ui, sans-serif';
+        const val = imageSelectedRowData[field] || 'N/A';
+        let displayVal = String(val);
+        if (ctx.measureText(displayVal).width > 250) {
+          while (ctx.measureText(displayVal + '...').width > 250 && displayVal.length > 0) displayVal = displayVal.slice(0, -1);
+          displayVal += '...';
+        }
+        ctx.fillText(displayVal, 160, y);
+        y += 34;
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      document.getElementById('previewImage').src = dataUrl;
+      canvas.toBlob(blob => { imageGeneratedCanvasBlob = blob; }, 'image/png');
+      document.getElementById('imageModal').classList.add('active');
+    }
+
+    // ----- Event listeners for Original tabs -----
     document.getElementById('createBtn').addEventListener('click', createLink);
     document.getElementById('loadBtn').addEventListener('click', loadExisting);
     document.getElementById('applyCustomBtn').addEventListener('click', applyCustom);
     document.getElementById('applyDestBtn').addEventListener('click', changeDestination);
 
-    // Copy URL Button
     document.getElementById('copyUrlBtn').addEventListener('click', async () => {
       const url = document.getElementById('newUrl').value;
       if (!url) return;
@@ -709,7 +1107,6 @@ import Layout from '../layouts/Layout.astro';
       }
     });
 
-    // Image Generation & Modal
     document.getElementById('generateImageBtn').addEventListener('click', generateVisitorImage);
     document.getElementById('closeModalBtn').addEventListener('click', () => {
       document.getElementById('imageModal').classList.remove('active');
@@ -721,26 +1118,22 @@ import Layout from '../layouts/Layout.astro';
         await navigator.clipboard.write([item]);
         showToast('Image copied to clipboard!');
       } catch (err) {
-        showToast('Failed to copy image. Your browser might not support copying images directly.', true);
+        showToast('Failed to copy image.', true);
       }
     });
 
-    // Settings checkboxes auto-save on change
     ['chkSmartLogger','chkConsent','chkGPS','chkForwarding','chkPreview'].forEach(id => {
       document.getElementById(id).addEventListener('change', applySettings);
     });
 
-    // Visitors tab
     document.getElementById('refreshVisitorsBtn').addEventListener('click', () => refreshVisitors(false));
     document.getElementById('chkHideBots').addEventListener('change', applyBotFilter);
-    
-    // Auto Refresh & Notifications
+
     document.getElementById('chkAutoRefresh').addEventListener('change', function() {
       if (this.checked) {
         if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
           Notification.requestPermission();
         }
-        
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
         autoRefreshTimer = setInterval(() => refreshVisitors(false), 7500);
         showToast('Auto-refresh enabled.');
@@ -751,7 +1144,54 @@ import Layout from '../layouts/Layout.astro';
       }
     });
 
-    // Tab switching
+    // ----- Event listeners for Image tab -----
+    document.getElementById('imgCreateBtn').addEventListener('click', imgCreateLink);
+    document.getElementById('imgLoadBtn').addEventListener('click', imgLoadExisting);
+    document.getElementById('imgApplyCustomBtn').addEventListener('click', imgApplyCustom);
+    document.getElementById('imgCopyUrlBtn').addEventListener('click', async () => {
+      const url = document.getElementById('imgNewUrl').value;
+      if (!url) return;
+      try { await navigator.clipboard.writeText(url); showToast('URL copied!'); } catch { showToast('Copy failed', true); }
+    });
+    document.getElementById('imgRefreshVisitorsBtn').addEventListener('click', () => imgRefreshVisitors(false));
+    document.getElementById('imgChkHideBots').addEventListener('change', imgApplyBotFilter);
+    document.getElementById('imgChkAutoRefresh').addEventListener('change', function() {
+      if (this.checked) {
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') Notification.requestPermission();
+        if (imageAutoRefreshTimer) clearInterval(imageAutoRefreshTimer);
+        imageAutoRefreshTimer = setInterval(() => imgRefreshVisitors(false), 7500);
+      } else {
+        clearInterval(imageAutoRefreshTimer);
+        imageAutoRefreshTimer = null;
+      }
+    });
+    document.getElementById('imgGenerateImageBtn').addEventListener('click', imgGenerateVisitorImage);
+
+    // Copy embed buttons
+    document.querySelectorAll('.copy-embed-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.target;
+        const el = document.getElementById(targetId);
+        if (!el) return;
+        const text = el.innerText || el.textContent;
+        navigator.clipboard.writeText(text).then(() => showToast('Embed code copied!')).catch(() => showToast('Copy failed', true));
+      });
+    });
+
+    // Re‑attach copyImageBtn for image tab (already done above, but ensure both blobs are handled)
+    // The existing copyImageBtn listener uses generatedCanvasBlob; we'll also handle imageGeneratedCanvasBlob.
+    document.getElementById('copyImageBtn').addEventListener('click', async () => {
+      // Determine which blob to use based on which modal is open – simplest: if imageSelectedRowData is set, it's image tab.
+      const blob = imageSelectedRowData ? imageGeneratedCanvasBlob : generatedCanvasBlob;
+      if (!blob) return;
+      try {
+        const item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        showToast('Image copied!');
+      } catch { showToast('Copy failed', true); }
+    });
+
+    // Tab switching (already present, but we add image tab button handler automatically)
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -761,8 +1201,11 @@ import Layout from '../layouts/Layout.astro';
       });
     });
 
-    // Initial cleanup if needed
-    window.addEventListener('beforeunload', () => clearInterval(autoRefreshTimer));
+    // Cleanup on unload
+    window.addEventListener('beforeunload', () => {
+      clearInterval(autoRefreshTimer);
+      clearInterval(imageAutoRefreshTimer);
+    });
   </script>
 </Layout>
 
@@ -917,6 +1360,53 @@ import Layout from '../layouts/Layout.astro';
     margin: 0 0 1rem 0;
     color: var(--text-color);
     font-size: 1.1rem;
+  }
+
+  /* Embed helpers – NEW */
+  .embed-group {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+  .embed-group p {
+    margin: 0.5rem 0;
+    color: #9CA3AF;
+    font-size: 0.95rem;
+  }
+  .embed-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .embed-row code {
+    background: #1E1E1E;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    color: #00E5FF;
+    flex: 1;
+    word-break: break-all;
+    font-size: 0.9rem;
+    border: 1px solid #2A2A2A;
+  }
+  .copy-embed-btn {
+    background-color: var(--accent-color);
+    color: #000;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+  }
+  .copy-embed-btn:hover {
+    background-color: #00cce0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
   }
 
   /* Base input/button */
@@ -1126,7 +1616,7 @@ import Layout from '../layouts/Layout.astro';
     gap: 1.5rem;
   }
 
-  #clicksInfo {
+  #clicksInfo, #imgClicksInfo {
     font-weight: 600;
     color: var(--accent-color);
     background: rgba(0, 229, 255, 0.1);
