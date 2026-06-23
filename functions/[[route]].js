@@ -1,20 +1,26 @@
 // functions/api/[[route]].js
 const GRABIFY_BASE = 'https://grabify.org';
 
-// Helper to forward requests to Grabify (now follows redirects)
 async function grabifyRequest(path, method, body, cookie) {
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': method === 'GET'
-      ? 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-      : 'application/json, text/javascript, */*; q=0.01',
     'Accept-Language': 'en-US,en;q=0.9',
     'Origin': GRABIFY_BASE,
-    'Referer': path.includes('/track/')
-      ? `${GRABIFY_BASE}/track/${path.split('/track/')[1].split('/')[0]}/`
-      : `${GRABIFY_BASE}/`,
-    'X-Requested-With': 'XMLHttpRequest',
   };
+
+  if (method === 'GET') {
+    // NO X-Requested-With for GET (otherwise Grabify returns JSON error)
+    headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
+  } else {
+    // POST: AJAX headers only
+    headers['Accept'] = 'application/json, text/javascript, */*; q=0.01';
+    headers['X-Requested-With'] = 'XMLHttpRequest';
+  }
+
+  headers['Referer'] = path.includes('/track/')
+    ? `${GRABIFY_BASE}/track/${path.split('/track/')[1].split('/')[0]}/`
+    : `${GRABIFY_BASE}/`;
+
   if (cookie) {
     headers['Cookie'] = cookie;
   }
@@ -22,7 +28,7 @@ async function grabifyRequest(path, method, body, cookie) {
   const init = {
     method,
     headers,
-    redirect: 'follow',  // <-- mimic HttpClient behavior
+    redirect: 'follow',
   };
   if (method === 'POST' && body) {
     init.body = body;
@@ -42,7 +48,7 @@ async function grabifyRequest(path, method, body, cookie) {
   return json;
 }
 
-// Parse cookies helper
+// Cookie parsing
 function parseCookies(cookieHeader) {
   const cookies = {};
   if (cookieHeader) {
@@ -61,7 +67,6 @@ export async function onRequestPost(context) {
   const url = new URL(request.url);
   const route = url.pathname.replace('/api/', '');
 
-  // Cookie persistence
   const cookieHeader = request.headers.get('Cookie');
   const cookies = parseCookies(cookieHeader);
   let confirmation = cookies['grabify_confirmation'];
@@ -78,9 +83,7 @@ export async function onRequestPost(context) {
     switch (route) {
       case 'create': {
         const { url: targetUrl } = body;
-        if (!targetUrl) {
-          return new Response(JSON.stringify({ error: 'URL required' }), { status: 400 });
-        }
+        if (!targetUrl) return new Response(JSON.stringify({ error: 'URL required' }), { status: 400 });
         const formData = new URLSearchParams();
         formData.append('url', targetUrl);
         formData.append('type', 'shorten');
@@ -94,22 +97,17 @@ export async function onRequestPost(context) {
 
       case 'load': {
         const { code } = body;
-        if (!code) {
-          return new Response(JSON.stringify({ error: 'Code required' }), { status: 400 });
-        }
+        if (!code) return new Response(JSON.stringify({ error: 'Code required' }), { status: 400 });
 
         const htmlRes = await grabifyRequest(`/track/${code}/`, 'GET', null, `confirmation=${confirmation}`);
-        if (!htmlRes.ok) {
-          throw new Error(`Grabify responded with status ${htmlRes.status}`);
-        }
         const html = htmlRes.text;
 
-        // Debug mode: add ?debug=1 to the API URL to see raw HTML
+        // Debug mode (add ?debug=1 to the API URL) — now we know it works
         if (url.searchParams.get('debug') === '1') {
           return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
         }
 
-        // C#-compatible regex extraction
+        // C#-compatible regex
         const extract = (pattern) => {
           const match = html.match(new RegExp(pattern, 'i'));
           return match ? match[1].trim() : '';
@@ -210,7 +208,6 @@ export async function onRequestPost(context) {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   };
-
   if (newCookieSet) {
     const cookieString = `grabify_confirmation=${confirmation}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`;
     init.headers['Set-Cookie'] = cookieString;
