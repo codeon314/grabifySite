@@ -784,74 +784,76 @@ if (Astro.cookies.has('site_auth')) {
       </script>
     </Fragment>
   ) : (
-    <main class="login-main">
-      <div class="login-box">
-        <h1 style="color: var(--accent-color); text-align: center; margin-bottom: 1.5rem;">Access Restricted</h1>
-        <form id="loginForm" class="login-form">
-          <input type="password" id="pwdInput" placeholder="Enter Password" required autofocus />
-          <button type="submit" id="loginBtn">Login</button>
-        </form>
-      </div>
-    </main>
+    <Fragment>
+      <main class="login-main">
+        <div class="login-box">
+          <h1 style="color: var(--accent-color); text-align: center; margin-bottom: 1.5rem;">Access Restricted</h1>
+          <form id="loginForm" class="login-form">
+            <input type="password" id="pwdInput" placeholder="Enter Password" required autofocus />
+            <button type="submit" id="loginBtn">Login</button>
+          </form>
+        </div>
+      </main>
 
-    <!-- TOAST CONTAINER FOR LOGIN -->
-    <div id="toast-container"></div>
+      <!-- TOAST CONTAINER FOR LOGIN -->
+      <div id="toast-container"></div>
 
-    <script is:inline>
-      function showToast(message, isError = false) {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-        
-        const toast = document.createElement('div');
-        toast.className = `toast ${isError ? 'error' : ''}`;
-        toast.textContent = message;
-        
-        container.appendChild(toast);
-        
-        setTimeout(() => {
-          toast.classList.add('fade-out');
-          toast.addEventListener('animationend', () => toast.remove());
-        }, 3000);
-      }
-
-      document.getElementById('loginForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const pwdInput = document.getElementById('pwdInput');
-        const password = pwdInput.value;
-        const btn = document.getElementById('loginBtn');
-
-        btn.disabled = true;
-        btn.textContent = 'Checking...';
-
-        try {
-          const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password })
-          });
-
-          if (res.ok) {
-            window.location.reload();
-          } else {
-            // Trigger error state
-            pwdInput.classList.add('input-error');
-            pwdInput.value = '';
-            pwdInput.placeholder = 'Incorrect password';
-            showToast('Invalid password', true);
-            
-            setTimeout(() => {
-              pwdInput.classList.remove('input-error');
-              pwdInput.placeholder = 'Enter Password';
-            }, 3000);
-          }
-        } catch (err) {
-          showToast('Error connecting to server', true);
-        } finally {
-          btn.disabled = false;
-          btn.textContent = 'Login';
+      <script is:inline>
+        function showToast(message, isError = false) {
+          const container = document.getElementById('toast-container');
+          if (!container) return;
+          
+          const toast = document.createElement('div');
+          toast.className = `toast ${isError ? 'error' : ''}`;
+          toast.textContent = message;
+          
+          container.appendChild(toast);
+          
+          setTimeout(() => {
+            toast.classList.add('fade-out');
+            toast.addEventListener('animationend', () => toast.remove());
+          }, 3000);
         }
-      });
-    </script>
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const pwdInput = document.getElementById('pwdInput');
+          const password = pwdInput.value;
+          const btn = document.getElementById('loginBtn');
+
+          btn.disabled = true;
+          btn.textContent = 'Checking...';
+
+          try {
+            const res = await fetch('/api/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password })
+            });
+
+            if (res.ok) {
+              window.location.reload();
+            } else {
+              // Trigger error state
+              pwdInput.classList.add('input-error');
+              pwdInput.value = '';
+              pwdInput.placeholder = 'Incorrect password';
+              showToast('Invalid password', true);
+              
+              setTimeout(() => {
+                pwdInput.classList.remove('input-error');
+                pwdInput.placeholder = 'Enter Password';
+              }, 3000);
+            }
+          } catch (err) {
+            showToast('Error connecting to server', true);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = 'Login';
+          }
+        });
+      </script>
+    </Fragment>
   )}
 </Layout>
 

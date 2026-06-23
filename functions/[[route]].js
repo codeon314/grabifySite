@@ -66,12 +66,21 @@ export async function onRequestPost(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
 
+  // IMPORTANT: If this is NOT an API request, pass it along.
+  // This prevents the JSON parser from crashing on normal page loads.
   if (!url.pathname.startsWith('/api/')) {
     return next();
   }
 
   const route = url.pathname.replace('/api/', '');
-  const body = await request.json();
+  
+  // Safely parse JSON body
+  let body = {};
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
+  }
 
   // --- SECURE LOGIN HANDLER ---
   if (route === 'login') {
