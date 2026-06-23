@@ -80,21 +80,24 @@ export async function onRequestPost(context) {
         if (!code) return new Response(JSON.stringify({ error: 'Code required' }), { status: 400 });
         const htmlRes = await grabifyRequest(`/track/${code}/`, 'GET', null, `confirmation=${confirmation}`);
         const html = htmlRes.text;
-        // Extract fields (same as before)
+
+        // Helper: extract first capture group from regex, with fallback
         const extract = (pattern) => {
-          const match = html.match(new RegExp(pattern));
+          const match = html.match(new RegExp(pattern, 'i'));
           return match ? match[1].trim() : '';
         };
+
+        // More tolerant regex (allow extra attributes inside tags)
         return new Response(JSON.stringify({
-          originalUrl: extract('<div class="destination"><span>([^<]*)</span>'),
-          shortLink: extract('<div class="shortlink">([^<]*)</div>'),
-          trackingCode: extract('<div class="code">([^<]*)</div>'),
-          accessLink: extract('<div class="track">([^<]*)</div>'),
-          smart: /<input[^>]*name="smart"[^>]*checked/.test(html),
-          privacy: /<input[^>]*name="privacy"[^>]*checked/.test(html),
-          gps: /<input[^>]*name="gps"[^>]*checked/.test(html),
-          forwarding: /<input[^>]*name="forwarding"[^>]*checked/.test(html),
-          preview: /<input[^>]*name="preview"[^>]*checked/.test(html),
+          originalUrl: extract('<div[^>]*class="destination"[^>]*>\\s*<span[^>]*>([^<]*)'),
+          shortLink:   extract('<div[^>]*class="shortlink"[^>]*>([^<]*)'),
+          trackingCode:extract('<div[^>]*class="code"[^>]*>([^<]*)'),
+          accessLink:  extract('<div[^>]*class="track"[^>]*>([^<]*)'),
+          smart:       /<input[^>]*name="smart"[^>]*checked/i.test(html),
+          privacy:     /<input[^>]*name="privacy"[^>]*checked/i.test(html),
+          gps:         /<input[^>]*name="gps"[^>]*checked/i.test(html),
+          forwarding:  /<input[^>]*name="forwarding"[^>]*checked/i.test(html),
+          preview:     /<input[^>]*name="preview"[^>]*checked/i.test(html),
         }), { status: 200 });
       }
 
