@@ -9,7 +9,6 @@ import Layout from '../layouts/Layout.astro';
     <div class="tabs">
       <button class="tab-btn active" data-tab="manager">Link Manager</button>
       <button class="tab-btn" data-tab="image">Image Tracker</button>
-      <button class="tab-btn" data-tab="visitors">Visitors</button>
     </div>
 
     <!-- LINK MANAGER TAB (Original) -->
@@ -86,6 +85,23 @@ import Layout from '../layouts/Layout.astro';
           <button id="applyDestBtn">Change URL</button>
         </div>
       </div>
+
+      <!-- VISITORS SECTION (Merged into Link Manager) -->
+      <div class="visitors-toolbar" style="margin-top: 2rem;">
+        <span id="clicksInfo">Clicks/Unique: 0/0</span>
+        <button id="refreshVisitorsBtn">Refresh Visitors</button>
+        <button id="generateImageBtn" disabled>Generate Image</button>
+        <div class="toolbar-toggles">
+          <label><input type="checkbox" id="chkHideBots" /> Hide Bots</label>
+          <label><input type="checkbox" id="chkAutoRefresh" /> Auto Refresh</label>
+        </div>
+      </div>
+      <div class="visitors-table-container">
+        <table id="visitorsTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- IMAGE TRACKER TAB (NEW) -->
@@ -107,10 +123,6 @@ import Layout from '../layouts/Layout.astro';
 
       <div class="info-group">
         <h3>Link Information</h3>
-        <div class="info-row">
-          <label>Original URL:</label>
-          <input type="text" id="imgOriginalUrl" readonly />
-        </div>
         <div class="info-row">
           <label>New URL:</label>
           <div class="input-group" style="flex: 1;">
@@ -168,25 +180,6 @@ import Layout from '../layouts/Layout.astro';
       </div>
       <div class="visitors-table-container">
         <table id="imgVisitorsTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- VISITORS TAB (Original) -->
-    <div id="tab-visitors" class="tab-panel">
-      <div class="visitors-toolbar">
-        <span id="clicksInfo">Clicks/Unique: 0/0</span>
-        <button id="refreshVisitorsBtn">Refresh Visitors</button>
-        <button id="generateImageBtn" disabled>Generate Image</button>
-        <div class="toolbar-toggles">
-          <label><input type="checkbox" id="chkHideBots" /> Hide Bots</label>
-          <label><input type="checkbox" id="chkAutoRefresh" /> Auto Refresh</label>
-        </div>
-      </div>
-      <div class="visitors-table-container">
-        <table id="visitorsTable">
           <thead></thead>
           <tbody></tbody>
         </table>
@@ -833,7 +826,6 @@ import Layout from '../layouts/Layout.astro';
       btn.textContent = 'Loading...';
       try {
         const data = await apiCall('/api/load', { code });
-        document.getElementById('imgOriginalUrl').value = data.originalUrl;
         document.getElementById('imgNewUrl').value = data.shortLink;
         document.getElementById('imgTrackingCode').value = data.trackingCode;
         document.getElementById('imgAccessLink').value = data.accessLink;
@@ -871,7 +863,6 @@ import Layout from '../layouts/Layout.astro';
       if (!code) return;
       try {
         const data = await apiCall('/api/load', { code });
-        document.getElementById('imgOriginalUrl').value = data.originalUrl;
         document.getElementById('imgNewUrl').value = data.shortLink;
         document.getElementById('imgTrackingCode').value = data.trackingCode;
         document.getElementById('imgAccessLink').value = data.accessLink;
