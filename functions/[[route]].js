@@ -1,7 +1,7 @@
 // functions/api/[[route]].js
 const GRABIFY_BASE = 'https://grabify.org';
 
-// Helper to forward requests to Grabify
+// Helper to forward requests to Grabify (now follows redirects)
 async function grabifyRequest(path, method, body, cookie) {
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -19,7 +19,11 @@ async function grabifyRequest(path, method, body, cookie) {
     headers['Cookie'] = cookie;
   }
 
-  const init = { method, headers };
+  const init = {
+    method,
+    headers,
+    redirect: 'follow',  // <-- mimic HttpClient behavior
+  };
   if (method === 'POST' && body) {
     init.body = body;
   }
@@ -38,7 +42,7 @@ async function grabifyRequest(path, method, body, cookie) {
   return json;
 }
 
-// Parse a cookie string into an object
+// Parse cookies helper
 function parseCookies(cookieHeader) {
   const cookies = {};
   if (cookieHeader) {
@@ -57,13 +61,11 @@ export async function onRequestPost(context) {
   const url = new URL(request.url);
   const route = url.pathname.replace('/api/', '');
 
-  // Read existing confirmation cookie from the request
+  // Cookie persistence
   const cookieHeader = request.headers.get('Cookie');
   const cookies = parseCookies(cookieHeader);
   let confirmation = cookies['grabify_confirmation'];
   let newCookieSet = false;
-
-  // If no cookie exists, generate a new one (this will be set on the response)
   if (!confirmation) {
     confirmation = `auto_${crypto.randomUUID().replace(/-/g, '')}`;
     newCookieSet = true;
@@ -95,20 +97,29 @@ export async function onRequestPost(context) {
         if (!code) {
           return new Response(JSON.stringify({ error: 'Code required' }), { status: 400 });
         }
+
         const htmlRes = await grabifyRequest(`/track/${code}/`, 'GET', null, `confirmation=${confirmation}`);
+        if (!htmlRes.ok) {
+          throw new Error(`Grabify responded with status ${htmlRes.status}`);
+        }
         const html = htmlRes.text;
 
-        // Use the exact patterns from the C# app (adapted to JS regex)
+        // Debug mode: add ?debug=1 to the API URL to see raw HTML
+        if (url.searchParams.get('debug') === '1') {
+          return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
+        }
+
+        // C#-compatible regex extraction
         const extract = (pattern) => {
-          const match = html.match(pattern);
+          const match = html.match(new RegExp(pattern, 'i'));
           return match ? match[1].trim() : '';
         };
 
         responseBody = {
-          originalUrl:  extract(/<div class="destination"><span>([^<]*)<\/span>/i),
-          shortLink:    extract(/<div class="shortlink">([^<]*)<\/div>/i),
-          trackingCode: extract(/<div class="code">([^<]*)<\/div>/i),
-          accessLink:   extract(/<div class="track">([^<]*)<\/div>/i),
+          originalUrl:  extract('<div[^>]*class="destination"[^>]*><span[^>]*>([^<]*)'),
+          shortLink:    extract('<div[^>]*class="shortlink"[^>]*>([^<]*)'),
+          trackingCode: extract('<div[^>]*class="code"[^>]*>([^<]*)'),
+          accessLink:   extract('<div[^>]*class="track"[^>]*>([^<]*)'),
           smart:        /<input[^>]*\bname="smart"[^>]*\bchecked/i.test(html),
           privacy:      /<input[^>]*\bname="privacy"[^>]*\bchecked/i.test(html),
           gps:          /<input[^>]*\bname="gps"[^>]*\bchecked/i.test(html),
@@ -195,13 +206,11 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
 
-  // Build response with JSON body
   const init = {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   };
 
-  // If we generated a new cookie, set it
   if (newCookieSet) {
     const cookieString = `grabify_confirmation=${confirmation}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`;
     init.headers['Set-Cookie'] = cookieString;
