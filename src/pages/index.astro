@@ -105,7 +105,9 @@ import Layout from '../layouts/Layout.astro';
   </main>
 </Layout>
 
-<style>
+<style is:global>
+  /* Using is:global so dynamically created JS elements (like custom dropdowns) receive styling */
+  
   main {
     max-width: 900px;
     margin: auto;
@@ -361,15 +363,15 @@ import Layout from '../layouts/Layout.astro';
     left: 0;
     right: 0;
     background: #111;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--accent-color);
     border-radius: 6px;
-    z-index: 10;
+    z-index: 999; /* Ensure it floats above everything */
     max-height: 0;
     overflow-y: auto;
     opacity: 0;
     visibility: hidden;
     transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0.4s;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.8);
   }
   .custom-select-wrapper.open .custom-select-options {
     max-height: 250px;
@@ -381,6 +383,10 @@ import Layout from '../layouts/Layout.astro';
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
     color: #D1D5DB;
+    border-bottom: 1px solid #1A1A1A;
+  }
+  .custom-option:last-child {
+    border-bottom: none;
   }
   .custom-option:hover {
     background: #222;
@@ -429,60 +435,62 @@ import Layout from '../layouts/Layout.astro';
     border-radius: 6px;
   }
 
-  /* Rebuilt table to match C# DataGridView perfectly */
+  /* Rebuilt table to match theme with proper spacing and grid lines */
   .visitors-table-container {
     overflow: auto;
     max-height: 500px;
-    border: 1px solid #444;
-    background: #1E1E1E;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
   table {
-    width: max-content; /* Forces horizontal scroll instead of wrapping */
-    min-width: 100%;
+    width: 100%;
+    min-width: max-content; /* Forces horizontal scroll instead of wrapping */
     border-collapse: collapse;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     text-align: left;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
   th, td {
-    padding: 0.4rem 0.8rem;
-    border: 1px solid #444; /* C# Grid lines */
+    padding: 0.8rem 1.2rem; /* Generous padding for readability */
+    border: 1px solid #2A2A2A; /* Visible grid lines */
     white-space: nowrap !important; /* Strictly prevent wrapping */
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 350px;
   }
   th {
-    background: #333;
-    color: #FFF;
+    background: #111;
+    color: var(--accent-color);
     position: sticky;
     top: 0;
     z-index: 2;
-    font-weight: 500;
-    border-bottom: 2px solid #555;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--accent-color);
   }
   td {
     color: #EAEAEA;
   }
   tbody tr {
-    background: #1E1E1E; /* C# Row color */
-    transition: background-color 0.1s ease;
+    background: #0A0A0A;
+    transition: background-color 0.2s ease;
   }
   tbody tr:nth-child(even) {
-    background: #252526; /* C# Alternate row color */
+    background: #111; /* Alternate row color */
   }
-  /* Row hover effect (Windows Accent Blue) */
+  /* Row hover effect matching the cyan theme */
   tbody tr:hover td {
-    background: #094771; 
+    background: rgba(0, 229, 255, 0.08); 
     color: #FFF;
     cursor: default;
   }
   tr.bot-row td {
-    color: #888;
+    color: #6B7280;
   }
   tbody tr.bot-row:hover td {
-    color: #CCC;
+    color: #9CA3AF;
   }
 
   /* Mobile Responsiveness */
@@ -748,8 +756,9 @@ import Layout from '../layouts/Layout.astro';
         
         document.getElementById('txtPath').value = path;
         
-        cmbExt.value = extensions.includes(finalExt) ? finalExt : '';
-        updateCustomSelectUI(cmbExt);
+        const cmbExtEl = document.getElementById('cmbExtension');
+        cmbExtEl.value = extensions.includes(finalExt) ? finalExt : '';
+        updateCustomSelectUI(cmbExtEl);
       } catch {}
 
       // Also set the result field
@@ -798,8 +807,9 @@ import Layout from '../layouts/Layout.astro';
         
         document.getElementById('txtPath').value = path;
         
-        cmbExt.value = extensions.includes(finalExt) ? finalExt : '';
-        updateCustomSelectUI(cmbExt);
+        const cmbExtEl = document.getElementById('cmbExtension');
+        cmbExtEl.value = extensions.includes(finalExt) ? finalExt : '';
+        updateCustomSelectUI(cmbExtEl);
       } catch {}
     } catch (e) {
       console.error('refreshLinkInfo failed:', e);
@@ -827,7 +837,7 @@ import Layout from '../layouts/Layout.astro';
     if (!currentCode) return alert('Create or load a link first.');
     const domain = document.getElementById('cmbDomain').value;
     const path = document.getElementById('txtPath').value.trim();
-    const extension = cmbExt.value;
+    const extension = document.getElementById('cmbExtension').value;
     try {
       const data = await apiCall('/api/custom', { code: currentCode, domain, path, extension });
       document.getElementById('newUrl').value = data.shortlink;
